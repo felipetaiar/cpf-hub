@@ -11,7 +11,7 @@ const CLIENT_ID = '5798831532059966';
 const CLIENT_SECRET = 'qt5i8KjEWCMMECtWDspShpDktS9dWCeN';
 
 app.get('/', (req, res) => {
-  res.json({ status: 'CPF Hub API online', version: '3.0' });
+  res.json({ status: 'CPF Hub API online', version: '4.0' });
 });
 
 // Proxy GET genérico
@@ -22,14 +22,14 @@ app.get('/ml/*', async (req, res) => {
   const query = new URLSearchParams(req.query).toString();
   const url = `${ML_BASE}/${path}${query ? '?' + query : ''}`;
   try {
-    const response = await axios.get(url, { headers: { Authorization: `Bearer ${token}` } });
-    res.json(response.data);
+    const r = await axios.get(url, { headers: { Authorization: `Bearer ${token}` } });
+    res.json(r.data);
   } catch (err) {
     res.status(err.response?.status || 500).json(err.response?.data || { error: err.message });
   }
 });
 
-// Busca pedidos com dados financeiros reais
+// Busca pedidos com dados financeiros reais e precisos
 app.get('/orders-full', async (req, res) => {
   const token = req.headers['x-ml-token'];
   if (!token) return res.status(401).json({ error: 'Token não informado' });
@@ -51,66 +51,38 @@ app.get('/orders-full', async (req, res) => {
       try {
         const salePrice = parseFloat(order.total_amount) || 0;
 
-        // Busca order completa (tem sale_fee por item com quantidade já multiplicada)
-        const orderDetail = await axios.get(`${ML_BASE}/orders/${order.id}`, {
-          headers: { Authorization: `Bearer ${token}` }
-        }).then(r => r.data).catch(() => order);
-
         // ── COMISSÃO REAL ──
-        // sale_fee no order_items já vem multiplicado pela quantidade
+        // sale_fee vem por UNIDADE no order_items
+        // deve ser multiplicado pela quantidade de cada item
+        const items = order.order_items || [];
         let mlFee = 0;
-        const items = orderDetail.order_items || order.order_items || [];
         items.forEach(item => {
-          // sale_fee = comissão total do item (unit_price * qty * pct)
-          const fee = parseFloat(item.sale_fee || 0);
-          mlFee += Math.abs(fee);
+          const feePerUnit = Math.abs(parseFloat(item.sale_fee || 0));
+          const qty = parseInt(item.quantity || 1);
+          mlFee += feePerUnit * qty;
         });
 
-        // Fallback: marketplace_fee nos payments (também é o total)
-        if (mlFee === 0) {
-          const payments = orderDetail.payments || order.payments || [];
-          payments.forEach(p => {
-            if (p.marketplace_fee) mlFee += Math.abs(parseFloat(p.marketplace_fee) || 0);
-          });
-        }
-
         // ── FRETE REAL ──
-        // Busca no shipment o custo real que o seller paga
+        // Endpoint correto: /shipments/{id}/costs → senders[0].cost
+        // É o valor final que o seller paga, já com descontos do ML aplicados
         let shippingCost = 0;
-        const shippingId = order.shipping?.id || orderDetail.shipping?.id;
-
+        const shippingId = order.shipping?.id;
         if (shippingId) {
-          const shipDetail = await axios.get(`${ML_BASE}/shipments/${shippingId}`, {
-            headers: { Authorization: `Bearer ${token}` }
-          }).then(r => r.data).catch(() => null);
+          const shipCosts = await axios.get(
+            `${ML_BASE}/shipments/${shippingId}/costs`,
+            { headers: { Authorization: `Bearer ${token}` } }
+          ).then(r => r.data).catch(() => null);
 
-          if (shipDetail) {
-            // shipping_option.cost = valor que o seller paga pelo envio
-            const optCost = parseFloat(shipDetail.shipping_option?.cost || 0);
-            // base_cost = custo base do envio
-            const baseCost = parseFloat(shipDetail.base_cost || 0);
-            // sender_cost = custo para o remetente (seller)
-            const senderCost = parseFloat(shipDetail.sender_cost || 0);
-
-            // Prioridade: sender_cost > shipping_option.cost > base_cost
-            shippingCost = senderCost || optCost || baseCost;
-            shippingCost = Math.abs(shippingCost);
+          if (shipCosts?.senders?.length > 0) {
+            // senders[0].cost = custo final do seller após descontos
+            shippingCost = Math.abs(parseFloat(shipCosts.senders[0].cost || 0));
           }
-        }
-
-        // Fallback: tenta pegar do payments
-        if (shippingCost === 0) {
-          const payments = orderDetail.payments || order.payments || [];
-          payments.forEach(p => {
-            const sc = Math.abs(parseFloat(p.shipping_cost || 0));
-            if (sc > 0) shippingCost = Math.max(shippingCost, sc);
-          });
         }
 
         const netReceived = salePrice - mlFee - shippingCost;
 
         return {
-          ...orderDetail,
+          ...order,
           _financial: {
             sale_price:    salePrice,
             ml_fee:        mlFee,
@@ -145,7 +117,8 @@ app.post('/ml/oauth/refresh', async (req, res) => {
   const { refresh_token } = req.body;
   if (!refresh_token) return res.status(400).json({ error: 'refresh_token obrigatório' });
   try {
-    const response = await axios.post(`${ML_BASE}/oauth/token`,
+    const r = await axios.post(
+      `${ML_BASE}/oauth/token`,
       new URLSearchParams({
         grant_type: 'refresh_token',
         client_id: CLIENT_ID,
@@ -154,11 +127,11 @@ app.post('/ml/oauth/refresh', async (req, res) => {
       }),
       { headers: { 'Content-Type': 'application/x-www-form-urlencoded' } }
     );
-    res.json(response.data);
+    res.json(r.data);
   } catch (err) {
     res.status(err.response?.status || 500).json(err.response?.data || { error: err.message });
   }
 });
 
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log(`CPF Hub v3.0 rodando na porta ${PORT}`));
+app.listen(PORT, () => console.log(`CPF Hub v4.0 rodando na porta ${PORT}`));
