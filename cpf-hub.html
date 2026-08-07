@@ -1,0 +1,1064 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CPF Hub · Lucro Real</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap');
+
+:root {
+  --bg:      #0D0F14;
+  --s1:      #13161D;
+  --s2:      #181C25;
+  --s3:      #1E2330;
+  --b1:      rgba(255,255,255,.06);
+  --b2:      rgba(255,255,255,.11);
+  --text:    #F1F3F8;
+  --sub:     #8B93A7;
+  --dim:     #4A5268;
+  --green:   #22C55E;
+  --gbg:     rgba(34,197,94,.1);
+  --gborder: rgba(34,197,94,.2);
+  --red:     #F43F5E;
+  --rbg:     rgba(244,63,94,.1);
+  --amber:   #F59E0B;
+  --abg:     rgba(245,158,11,.1);
+  --blue:    #3B82F6;
+  --bbg:     rgba(59,130,246,.1);
+  --purple:  #A855F7;
+  --pbg:     rgba(168,85,247,.1);
+  --ml:      #FFE600;
+}
+
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{height:100%}
+body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);font-size:13px;line-height:1.5;overflow:hidden}
+
+/* ── SHELL ── */
+.shell{display:flex;height:100vh}
+
+/* ── SIDEBAR ── */
+.sidebar{
+  width:52px;flex-shrink:0;background:var(--s1);
+  border-right:1px solid var(--b1);
+  display:flex;flex-direction:column;align-items:center;
+  padding:12px 0;gap:4px;overflow:hidden;
+  transition:width .2s ease;
+  position:relative;z-index:10;
+}
+.sidebar:hover,.sidebar.pinned{width:210px;}
+.sb-logo{
+  width:34px;height:34px;border-radius:9px;
+  background:var(--green);display:flex;align-items:center;justify-content:center;
+  font-weight:800;font-size:13px;color:#000;flex-shrink:0;
+  margin-bottom:8px;
+}
+.sb-item{
+  width:calc(100% - 8px);display:flex;align-items:center;gap:10px;
+  padding:9px 9px;border-radius:7px;cursor:pointer;
+  color:var(--dim);transition:all .12s;white-space:nowrap;overflow:hidden;
+  border:1px solid transparent;
+}
+.sb-item:hover{background:var(--s2);color:var(--sub);}
+.sb-item.active{background:var(--gbg);color:var(--green);border-color:var(--gborder);}
+.sb-icon{font-size:16px;flex-shrink:0;width:20px;text-align:center;}
+.sb-label{font-size:12px;font-weight:500;opacity:0;transition:opacity .15s;}
+.sidebar:hover .sb-label,.sidebar.pinned .sb-label{opacity:1;}
+.sb-sep{width:calc(100% - 16px);height:1px;background:var(--b1);margin:6px 0;}
+.sb-badge{
+  margin-left:auto;font-size:10px;font-weight:600;
+  background:var(--s3);color:var(--sub);padding:1px 5px;
+  border-radius:8px;flex-shrink:0;
+}
+.sb-item.active .sb-badge{background:rgba(34,197,94,.2);color:var(--green);}
+
+/* ── MAIN ── */
+.main{flex:1;display:flex;flex-direction:column;overflow:hidden;min-width:0;}
+
+/* ── TOPBAR ── */
+.topbar{
+  height:50px;flex-shrink:0;background:var(--s1);
+  border-bottom:1px solid var(--b1);
+  display:flex;align-items:center;gap:12px;padding:0 18px;
+}
+.tb-title{font-size:13px;font-weight:600;white-space:nowrap;}
+.tb-sub{font-size:11px;color:var(--dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.tb-space{flex:1;}
+.tb-status{font-size:11px;display:flex;align-items:center;gap:5px;white-space:nowrap;}
+.tb-dot{width:6px;height:6px;border-radius:50%;background:var(--green);animation:pulse 2s infinite;}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+.btn{
+  display:inline-flex;align-items:center;gap:5px;
+  padding:6px 13px;border-radius:6px;font-size:12px;font-weight:600;
+  cursor:pointer;border:none;font-family:inherit;transition:all .15s;
+  white-space:nowrap;
+}
+.btn-ghost{background:var(--s3);color:var(--sub);border:1px solid var(--b2);}
+.btn-ghost:hover{color:var(--text);}
+.btn-green{background:var(--green);color:#000;}
+.btn-green:hover{filter:brightness(1.08);}
+.btn-green:disabled{opacity:.4;cursor:not-allowed;filter:none;}
+.btn-sm{padding:5px 10px;font-size:11px;}
+
+/* ── CONTENT ── */
+.content{flex:1;overflow-y:auto;display:flex;flex-direction:column;}
+
+/* ── PLATFORM BAR ── */
+.platform-bar{
+  background:var(--s1);border-bottom:1px solid var(--b1);
+  padding:12px 18px;flex-shrink:0;
+}
+.pb-label{font-size:10px;font-weight:700;letter-spacing:.8px;color:var(--dim);text-transform:uppercase;margin-bottom:10px;}
+.pb-cards{display:flex;gap:8px;overflow-x:auto;padding-bottom:2px;}
+.pb-card{
+  flex-shrink:0;min-width:130px;background:var(--s2);
+  border:1px solid var(--b1);border-radius:8px;
+  padding:10px 12px;cursor:pointer;transition:all .15s;
+  position:relative;overflow:hidden;
+}
+.pb-card::before{content:'';position:absolute;left:0;top:0;bottom:0;width:3px;}
+.pb-card[data-p="Todos"]::before{background:var(--green);}
+.pb-card[data-p="ML"]::before{background:var(--ml);}
+.pb-card.active{border-color:var(--b2);background:var(--s3);}
+.pb-card[data-p="Todos"].active{border-color:var(--gborder);}
+.pb-card[data-p="ML"].active{border-color:rgba(255,230,0,.25);}
+.pb-name{font-size:10px;font-weight:700;color:var(--sub);margin-bottom:5px;display:flex;align-items:center;gap:5px;}
+.pb-dot{width:6px;height:6px;border-radius:50%;flex-shrink:0;}
+.pb-revenue{font-size:15px;font-weight:700;letter-spacing:-.4px;margin-bottom:4px;font-variant-numeric:tabular-nums;}
+.pb-meta{display:flex;align-items:center;gap:6px;margin-top:5px;}
+.pb-mbar{flex:1;height:3px;background:var(--s1);border-radius:2px;overflow:hidden;}
+.pb-mfill{height:100%;border-radius:2px;transition:width .5s ease;}
+.pb-mpct{font-size:10px;font-weight:700;min-width:30px;text-align:right;font-variant-numeric:tabular-nums;}
+
+/* ── KPI STRIP ── */
+.kpi-strip{display:flex;border-bottom:1px solid var(--b1);flex-shrink:0;overflow-x:auto;}
+.kpi{flex:1;min-width:110px;padding:12px 16px;border-right:1px solid var(--b1);}
+.kpi:last-child{border-right:none;}
+.kpi-lbl{font-size:10px;font-weight:700;letter-spacing:.5px;color:var(--dim);text-transform:uppercase;margin-bottom:5px;}
+.kpi-val{font-size:18px;font-weight:700;letter-spacing:-.5px;font-variant-numeric:tabular-nums;font-family:'JetBrains Mono',monospace;}
+.kpi-val.green{color:var(--green);}
+.kpi-val.red{color:var(--red);}
+.kpi-val.amber{color:var(--amber);}
+.kpi-val.blue{color:var(--blue);}
+.kpi-val.purple{color:var(--purple);}
+.kpi-sub{font-size:10px;color:var(--dim);margin-top:4px;}
+
+/* ── TABLE AREA ── */
+.tarea{flex:1;display:flex;flex-direction:column;padding:14px 18px;overflow:hidden;min-height:0;}
+.tcontrols{display:flex;align-items:center;gap:8px;margin-bottom:10px;flex-wrap:wrap;}
+.search{
+  position:relative;flex:1;min-width:160px;max-width:280px;
+}
+.search input{
+  width:100%;padding:7px 10px 7px 30px;
+  background:var(--s2);border:1px solid var(--b1);border-radius:6px;
+  color:var(--text);font-family:inherit;font-size:12px;outline:none;
+  transition:border-color .15s;
+}
+.search input:focus{border-color:var(--b2);}
+.search input::placeholder{color:var(--dim);}
+.search-ico{position:absolute;left:9px;top:50%;transform:translateY(-50%);color:var(--dim);font-size:13px;}
+.fchips{display:flex;gap:5px;flex-wrap:wrap;}
+.chip{
+  padding:4px 9px;border-radius:16px;font-size:11px;font-weight:600;
+  border:1px solid var(--b1);color:var(--dim);cursor:pointer;
+  transition:all .12s;white-space:nowrap;
+}
+.chip:hover{border-color:var(--b2);color:var(--sub);}
+.chip.active{border-color:var(--green);color:var(--green);background:var(--gbg);}
+.chip[data-m="warn"].active{border-color:var(--amber);color:var(--amber);background:var(--abg);}
+.chip[data-m="bad"].active{border-color:var(--red);color:var(--red);background:var(--rbg);}
+.count-lbl{font-size:11px;color:var(--dim);margin-left:auto;white-space:nowrap;}
+
+.twrap{flex:1;overflow:auto;background:var(--s1);border:1px solid var(--b1);border-radius:8px;min-height:0;}
+table{width:100%;border-collapse:collapse;min-width:860px;}
+thead th{
+  padding:8px 12px;text-align:left;font-size:10px;font-weight:700;
+  letter-spacing:.6px;color:var(--dim);text-transform:uppercase;
+  background:var(--s2);border-bottom:1px solid var(--b1);
+  white-space:nowrap;cursor:pointer;user-select:none;
+  position:sticky;top:0;z-index:2;
+}
+thead th:hover{color:var(--sub);}
+thead th.sorted{color:var(--text);}
+tbody tr{border-bottom:1px solid var(--b1);cursor:pointer;transition:background .08s;}
+tbody tr:last-child{border-bottom:none;}
+tbody tr:hover{background:rgba(255,255,255,.025);}
+td{padding:9px 12px;font-size:12px;vertical-align:middle;}
+.mono{font-family:'JetBrains Mono',monospace;font-size:11px;font-variant-numeric:tabular-nums;}
+.text-sub{color:var(--sub);}
+.text-dim{color:var(--dim);}
+
+/* platform badge */
+.pbadge{display:inline-flex;align-items:center;gap:4px;padding:2px 7px;border-radius:4px;font-size:10px;font-weight:700;letter-spacing:.3px;}
+.pbadge.ML{background:rgba(255,230,0,.1);color:var(--ml);}
+
+/* margin bar */
+.mbar{display:flex;align-items:center;gap:6px;}
+.mtrack{width:52px;height:3px;background:var(--s3);border-radius:2px;overflow:hidden;flex-shrink:0;}
+.mfill{height:100%;border-radius:2px;}
+.mfill.g{background:var(--green);}
+.mfill.w{background:var(--amber);}
+.mfill.b{background:var(--red);}
+.mpct{font-size:11px;font-weight:700;min-width:34px;text-align:right;font-family:'JetBrains Mono';font-variant-numeric:tabular-nums;}
+.mpct.g{color:var(--green);}
+.mpct.w{color:var(--amber);}
+.mpct.b{color:var(--red);}
+
+/* cobrança indevida flag */
+.flag-indevida{
+  display:inline-flex;align-items:center;gap:3px;
+  padding:2px 6px;border-radius:4px;font-size:10px;font-weight:700;
+  background:var(--rbg);color:var(--red);border:1px solid rgba(244,63,94,.2);
+}
+
+/* pager */
+.pager{display:flex;align-items:center;gap:5px;margin-top:10px;justify-content:flex-end;}
+.pgbtn{padding:4px 9px;border-radius:5px;border:1px solid var(--b1);background:var(--s2);color:var(--sub);cursor:pointer;font-size:11px;font-family:inherit;}
+.pgbtn:hover{border-color:var(--b2);color:var(--text);}
+.pgbtn.cur{border-color:var(--green);color:var(--green);background:var(--gbg);}
+.pg-info{font-size:11px;color:var(--dim);}
+
+/* empty/loading */
+.empty{text-align:center;padding:50px 20px;color:var(--dim);}
+.empty-ico{font-size:36px;margin-bottom:10px;}
+.empty-title{font-size:14px;font-weight:600;color:var(--sub);margin-bottom:6px;}
+.empty-desc{font-size:12px;line-height:1.7;color:var(--dim);}
+.spin{display:inline-block;width:22px;height:22px;border:2px solid var(--b2);border-top-color:var(--green);border-radius:50%;animation:spin .65s linear infinite;margin-bottom:10px;}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* ── DRAWER ── */
+.drawer{
+  position:fixed;right:0;top:0;bottom:0;width:360px;
+  background:var(--s1);border-left:1px solid var(--b1);
+  z-index:100;display:flex;flex-direction:column;
+  transform:translateX(105%);transition:transform .22s cubic-bezier(.4,0,.2,1);
+  box-shadow:-16px 0 50px rgba(0,0,0,.5);
+}
+.drawer.open{transform:translateX(0);}
+.dr-head{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:14px 16px;border-bottom:1px solid var(--b1);flex-shrink:0;
+}
+.dr-title{font-size:13px;font-weight:600;}
+.dr-close{
+  width:26px;height:26px;border-radius:5px;border:1px solid var(--b1);
+  background:transparent;color:var(--sub);cursor:pointer;font-size:14px;
+  display:flex;align-items:center;justify-content:center;transition:all .12s;
+}
+.dr-close:hover{background:var(--s2);color:var(--text);}
+.dr-body{flex:1;overflow-y:auto;padding:16px;}
+
+.dr-order{font-size:10px;font-weight:700;letter-spacing:.8px;color:var(--dim);text-transform:uppercase;margin-bottom:4px;}
+.dr-product{font-size:14px;font-weight:700;line-height:1.35;margin-bottom:8px;}
+.dr-tags{display:flex;gap:5px;flex-wrap:wrap;margin-bottom:18px;}
+
+/* anatomy */
+.ana-label{font-size:10px;font-weight:700;letter-spacing:.8px;color:var(--dim);text-transform:uppercase;margin-bottom:7px;}
+.ana-bar{display:flex;height:7px;border-radius:3px;overflow:hidden;gap:1px;}
+.ana-legend{display:flex;flex-direction:column;gap:6px;margin-top:8px;margin-bottom:18px;}
+.ana-row{display:flex;align-items:center;justify-content:space-between;}
+.ana-left{display:flex;align-items:center;gap:6px;}
+.ana-dot{width:6px;height:6px;border-radius:2px;flex-shrink:0;}
+.ana-name{font-size:11px;color:var(--sub);}
+.ana-right{display:flex;gap:8px;align-items:center;}
+.ana-brl{font-size:11px;font-weight:600;font-variant-numeric:tabular-nums;font-family:'JetBrains Mono';}
+.ana-pct{font-size:10px;color:var(--dim);min-width:30px;text-align:right;font-variant-numeric:tabular-nums;font-family:'JetBrains Mono';}
+
+.dr-divider{border:none;border-top:1px solid var(--b1);margin:14px 0;}
+.dr-row{display:flex;justify-content:space-between;align-items:center;padding:6px 0;}
+.dr-row-lbl{font-size:12px;}
+.dr-row-val{font-size:13px;font-weight:700;font-variant-numeric:tabular-nums;font-family:'JetBrains Mono';}
+.dr-row-val.green{color:var(--green);}
+.dr-row-val.red{color:var(--red);}
+.dr-row-val.blue{color:var(--blue);}
+.dr-row-val.amber{color:var(--amber);}
+
+.dr-margem-box{
+  background:var(--s2);border:1px solid var(--b1);border-radius:8px;
+  padding:12px 14px;margin-top:12px;
+  display:flex;align-items:center;justify-content:space-between;
+}
+.dmb-lbl{font-size:11px;color:var(--sub);}
+.dmb-sub{font-size:10px;color:var(--dim);margin-top:2px;}
+.dmb-val{font-size:26px;font-weight:800;letter-spacing:-1px;font-family:'JetBrains Mono';}
+.dmb-val.g{color:var(--green);}
+.dmb-val.w{color:var(--amber);}
+.dmb-val.b{color:var(--red);}
+
+/* alerta cobrança indevida */
+.alert-box{
+  background:var(--rbg);border:1px solid rgba(244,63,94,.25);
+  border-radius:7px;padding:10px 12px;margin-top:12px;
+}
+.alert-title{font-size:11px;font-weight:700;color:var(--red);margin-bottom:4px;}
+.alert-desc{font-size:11px;color:var(--sub);line-height:1.6;}
+.alert-val{font-size:14px;font-weight:700;color:var(--red);margin-top:6px;font-family:'JetBrains Mono';}
+
+/* ── CONFIG MODAL ── */
+.overlay{position:fixed;inset:0;z-index:200;background:rgba(0,0,0,.7);backdrop-filter:blur(5px);display:none;align-items:center;justify-content:center;}
+.overlay.open{display:flex;}
+.modal{background:var(--s1);border:1px solid var(--b2);border-radius:11px;width:460px;max-height:88vh;overflow-y:auto;box-shadow:0 20px 70px rgba(0,0,0,.7);}
+.modal-head{display:flex;align-items:center;justify-content:space-between;padding:18px 20px 0;}
+.modal-title{font-size:14px;font-weight:700;}
+.modal-body{padding:18px 20px;}
+.fg{margin-bottom:13px;}
+.fl{display:block;font-size:10px;font-weight:700;letter-spacing:.6px;color:var(--dim);text-transform:uppercase;margin-bottom:5px;}
+.fi{width:100%;padding:8px 10px;background:var(--s2);border:1px solid var(--b1);border-radius:6px;color:var(--text);font-family:inherit;font-size:12px;outline:none;transition:border-color .15s;}
+.fi:focus{border-color:var(--b2);}
+.fi::placeholder{color:var(--dim);}
+.frow{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+.fsep{border:none;border-top:1px solid var(--b1);margin:16px 0 4px;}
+.fsec{font-size:11px;font-weight:600;color:var(--sub);margin-bottom:10px;}
+.fact{display:flex;gap:8px;justify-content:flex-end;padding-top:6px;}
+
+/* ── CONCILIAÇÃO BADGE ── */
+.concil-count{
+  display:inline-flex;align-items:center;gap:4px;
+  background:var(--rbg);color:var(--red);border:1px solid rgba(244,63,94,.2);
+  border-radius:6px;padding:3px 8px;font-size:11px;font-weight:700;
+  cursor:pointer;transition:all .15s;
+}
+.concil-count:hover{background:rgba(244,63,94,.15);}
+
+/* info bar */
+.info-bar{
+  margin:0 18px 12px;
+  background:var(--bbg);border:1px solid rgba(59,130,246,.2);
+  border-radius:7px;padding:9px 13px;font-size:11px;color:#93C5FD;
+  display:flex;gap:8px;align-items:flex-start;line-height:1.6;flex-shrink:0;
+}
+
+@media(max-width:700px){
+  .sidebar{display:none;}
+  .kpi{min-width:100px;}
+  .drawer{width:100%;border-left:none;}
+}
+</style>
+</head>
+<body>
+<div class="shell">
+
+<!-- SIDEBAR -->
+<aside class="sidebar" id="sidebar">
+  <div class="sb-logo">CP</div>
+  <div class="sb-item active">
+    <span class="sb-icon">📊</span>
+    <span class="sb-label">Lucro Real</span>
+    <span class="sb-badge" id="sbTotal">–</span>
+  </div>
+  <div class="sb-item" onclick="showConciliacao()">
+    <span class="sb-icon">🔍</span>
+    <span class="sb-label">Conciliação</span>
+    <span class="sb-badge" id="sbAlerts" style="background:var(--rbg);color:var(--red)">–</span>
+  </div>
+  <div class="sb-item" onclick="alert('Em breve — DRE Mensal')">
+    <span class="sb-icon">📅</span>
+    <span class="sb-label">DRE Mensal</span>
+  </div>
+  <div class="sb-item" onclick="alert('Em breve — Pesquisa de Mercado')">
+    <span class="sb-icon">🎯</span>
+    <span class="sb-label">Mercado</span>
+  </div>
+  <div class="sb-sep"></div>
+  <div class="sb-item" onclick="openConfig()">
+    <span class="sb-icon">⚙</span>
+    <span class="sb-label">Configurações</span>
+  </div>
+  <div class="sb-item" onclick="exportCSV()">
+    <span class="sb-icon">⬇</span>
+    <span class="sb-label">Exportar CSV</span>
+  </div>
+  <div class="sb-item" onclick="loadDemo()">
+    <span class="sb-icon">🎮</span>
+    <span class="sb-label">Demo</span>
+  </div>
+</aside>
+
+<!-- MAIN -->
+<div class="main">
+
+  <!-- TOPBAR -->
+  <div class="topbar">
+    <div>
+      <div class="tb-title">CPF Hub · Lucro Real por Venda</div>
+      <div class="tb-sub" id="tbSub">Mercado Livre · dados reais via API oficial</div>
+    </div>
+    <div class="tb-space"></div>
+    <div class="tb-status" id="tbStatus" style="display:none">
+      <div class="tb-dot"></div>
+      <span style="color:var(--green);font-size:11px">Conectado ao ML</span>
+    </div>
+    <div id="concilAlert" style="display:none">
+      <div class="concil-count" onclick="showConciliacao()">
+        ⚠️ <span id="concilN">0</span> cobranças suspeitas
+      </div>
+    </div>
+    <button class="btn btn-ghost btn-sm" onclick="openConfig()">⚙ Config</button>
+    <button class="btn btn-green btn-sm" id="syncBtn" onclick="syncML()">↻ Sincronizar ML</button>
+  </div>
+
+  <!-- CONTENT -->
+  <div class="content" id="mainContent">
+
+    <!-- INFO BAR -->
+    <div style="padding:14px 18px 0;flex-shrink:0;">
+      <div class="info-bar" id="infoBar">
+        ℹ️ &nbsp;Clique em <strong>Sincronizar ML</strong> para importar seus pedidos com as taxas reais cobradas pelo Mercado Livre. Ou use <strong>Demo</strong> para ver com dados fictícios.
+      </div>
+    </div>
+
+    <!-- PLATFORM BAR -->
+    <div class="platform-bar">
+      <div class="pb-label">Desempenho por canal</div>
+      <div class="pb-cards">
+        <div class="pb-card active" data-p="Todos" onclick="setPlat('Todos',this)">
+          <div class="pb-name"><div class="pb-dot" style="background:var(--green)"></div>Todos os canais</div>
+          <div class="pb-revenue" id="pbRevTodos">R$ –</div>
+          <div class="pb-meta">
+            <div class="pb-mbar"><div class="pb-mfill" id="pbFillTodos" style="background:var(--green);width:0%"></div></div>
+            <div class="pb-mpct" id="pbPctTodos" style="color:var(--green)">–</div>
+          </div>
+        </div>
+        <div class="pb-card" data-p="ML" onclick="setPlat('ML',this)">
+          <div class="pb-name"><div class="pb-dot" style="background:var(--ml)"></div>Mercado Livre</div>
+          <div class="pb-revenue" id="pbRevML">R$ –</div>
+          <div class="pb-meta">
+            <div class="pb-mbar"><div class="pb-mfill" id="pbFillML" style="background:var(--ml);width:0%"></div></div>
+            <div class="pb-mpct" id="pbPctML" style="color:var(--ml)">–</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- KPI STRIP -->
+    <div class="kpi-strip">
+      <div class="kpi">
+        <div class="kpi-lbl">💰 Receita</div>
+        <div class="kpi-val blue" id="kR">R$ –</div>
+        <div class="kpi-sub" id="kRs">– vendas</div>
+      </div>
+      <div class="kpi">
+        <div class="kpi-lbl">🏪 Comissão ML</div>
+        <div class="kpi-val amber" id="kC">R$ –</div>
+        <div class="kpi-sub" id="kCs">–% receita</div>
+      </div>
+      <div class="kpi">
+        <div class="kpi-lbl">🚚 Frete ML</div>
+        <div class="kpi-val amber" id="kF">R$ –</div>
+        <div class="kpi-sub" id="kFs">–% receita</div>
+      </div>
+      <div class="kpi">
+        <div class="kpi-lbl">📋 Imposto</div>
+        <div class="kpi-val purple" id="kI">R$ –</div>
+        <div class="kpi-sub" id="kIs">–% receita</div>
+      </div>
+      <div class="kpi">
+        <div class="kpi-lbl">✅ Lucro líquido</div>
+        <div class="kpi-val green" id="kL">R$ –</div>
+        <div class="kpi-sub" id="kLs">margem –%</div>
+      </div>
+      <div class="kpi">
+        <div class="kpi-lbl">⚠️ Cobr. indevidas</div>
+        <div class="kpi-val red" id="kIndev">–</div>
+        <div class="kpi-sub" id="kIndevS">a recuperar: –</div>
+      </div>
+    </div>
+
+    <!-- TABLE AREA -->
+    <div class="tarea">
+      <div class="tcontrols">
+        <div class="search">
+          <span class="search-ico">🔍</span>
+          <input id="searchInput" placeholder="Buscar produto ou pedido #..." oninput="renderTable()">
+        </div>
+        <div class="fchips">
+          <div class="chip" data-m="good" onclick="toggleMargin('good',this)">● Boa &gt;20%</div>
+          <div class="chip" data-m="warn" onclick="toggleMargin('warn',this)">● Atenção</div>
+          <div class="chip" data-m="bad" onclick="toggleMargin('bad',this)">● Prejuízo</div>
+          <div class="chip" data-m="indev" onclick="toggleMargin('indev',this)">⚠ Indevida</div>
+        </div>
+        <span class="count-lbl" id="countLbl"></span>
+        <button class="btn btn-ghost btn-sm" onclick="exportCSV()">⬇ CSV</button>
+      </div>
+
+      <div class="twrap" id="twrap">
+        <div class="empty">
+          <div class="empty-ico">📊</div>
+          <div class="empty-title">Nenhum dado carregado</div>
+          <div class="empty-desc">Clique em <strong>Sincronizar ML</strong> para importar seus pedidos<br>com as taxas reais cobradas pelo Mercado Livre.<br><br>Ou use <strong>Demo</strong> na sidebar para visualizar com dados fictícios.</div>
+        </div>
+      </div>
+      <div class="pager" id="pager"></div>
+    </div>
+  </div>
+</div>
+</div>
+
+<!-- DRAWER -->
+<div class="drawer" id="drawer">
+  <div class="dr-head">
+    <div class="dr-title">Detalhes do pedido</div>
+    <button class="dr-close" onclick="closeDrawer()">✕</button>
+  </div>
+  <div class="dr-body" id="drBody"></div>
+</div>
+
+<!-- CONFIG MODAL -->
+<div class="overlay" id="overlay">
+  <div class="modal">
+    <div class="modal-head">
+      <div class="modal-title">⚙ Configurações</div>
+      <button class="dr-close" onclick="closeConfig()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="fg">
+        <label class="fl">Access Token do Mercado Livre</label>
+        <input class="fi" id="cToken" type="password" placeholder="APP_USR-...">
+      </div>
+      <div class="fg">
+        <label class="fl">Refresh Token</label>
+        <input class="fi" id="cRefresh" type="password" placeholder="TG-...">
+      </div>
+      <div class="frow">
+        <div class="fg">
+          <label class="fl">Data início</label>
+          <input class="fi" id="cDateS" type="date">
+        </div>
+        <div class="fg">
+          <label class="fl">Data fim</label>
+          <input class="fi" id="cDateE" type="date">
+        </div>
+      </div>
+      <hr class="fsep">
+      <div class="fsec">Custos que o ML não vê</div>
+      <div class="frow">
+        <div class="fg">
+          <label class="fl">Simples Nacional (%)</label>
+          <input class="fi" id="cImp" type="number" step="0.01" placeholder="6.00">
+        </div>
+        <div class="fg">
+          <label class="fl">CMV padrão (% se não informado)</label>
+          <input class="fi" id="cCmv" type="number" step="0.1" placeholder="45.0">
+        </div>
+      </div>
+      <div class="fg">
+        <label class="fl">Custo operacional fixo (R$/pedido)</label>
+        <input class="fi" id="cOp" type="number" step="0.01" placeholder="2.50">
+      </div>
+      <div class="fact">
+        <button class="btn btn-ghost" onclick="closeConfig()">Cancelar</button>
+        <button class="btn btn-green" onclick="saveConfig()">Salvar</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ══ STATE ══
+let sales = [], filtered = [], activePlat = 'Todos', activeMargin = null;
+let sortCol = 'date', sortDir = -1, page = 1;
+const PER = 30;
+
+let cfg = {
+  token: 'APP_USR-5798831532059966-080621-cf9728cfc406b6e8b9d3f8ac2306e6b0-605626828',
+  refresh: 'TG-6a7537c9b4c49a0001bc39c6-605626828',
+  userId: '605626828',
+  imp: 6, cmvPct: 45, op: 2.5,
+  dateS: '', dateE: ''
+};
+
+// ══ CONFIG ══
+function openConfig(){
+  loadCfg();
+  document.getElementById('cToken').value   = cfg.token||'';
+  document.getElementById('cRefresh').value = cfg.refresh||'';
+  document.getElementById('cImp').value     = cfg.imp||'';
+  document.getElementById('cCmv').value     = cfg.cmvPct||'';
+  document.getElementById('cOp').value      = cfg.op||'';
+  document.getElementById('cDateS').value   = cfg.dateS||'';
+  document.getElementById('cDateE').value   = cfg.dateE||'';
+  document.getElementById('overlay').classList.add('open');
+}
+function closeConfig(){ document.getElementById('overlay').classList.remove('open'); }
+function saveConfig(){
+  cfg.token   = document.getElementById('cToken').value.trim();
+  cfg.refresh = document.getElementById('cRefresh').value.trim();
+  cfg.imp     = parseFloat(document.getElementById('cImp').value)||6;
+  cfg.cmvPct  = parseFloat(document.getElementById('cCmv').value)||45;
+  cfg.op      = parseFloat(document.getElementById('cOp').value)||2.5;
+  cfg.dateS   = document.getElementById('cDateS').value;
+  cfg.dateE   = document.getElementById('cDateE').value;
+  localStorage.setItem('cpf_cfg2', JSON.stringify(cfg));
+  closeConfig();
+}
+function loadCfg(){
+  const s = localStorage.getItem('cpf_cfg2');
+  if(s) cfg = {...cfg,...JSON.parse(s)};
+}
+
+// ══ ML API ══
+async function mlGet(path){
+  const r = await fetch('https://api.mercadolibre.com'+path,{
+    headers:{Authorization:'Bearer '+cfg.token, Accept:'application/json'}
+  });
+  if(r.status === 401){
+    await refreshToken();
+    const r2 = await fetch('https://api.mercadolibre.com'+path,{
+      headers:{Authorization:'Bearer '+cfg.token, Accept:'application/json'}
+    });
+    return r2.json();
+  }
+  return r.json();
+}
+
+async function refreshToken(){
+  try{
+    const r = await fetch('https://api.mercadolibre.com/oauth/token',{
+      method:'POST',
+      headers:{'Content-Type':'application/x-www-form-urlencoded'},
+      body: new URLSearchParams({
+        grant_type:'refresh_token',
+        client_id:'5798831532059966',
+        client_secret:'qt5i8KjEWCMMECtWDspShpDktS9dWCeN',
+        refresh_token: cfg.refresh
+      })
+    });
+    const d = await r.json();
+    if(d.access_token){
+      cfg.token = d.access_token;
+      if(d.refresh_token) cfg.refresh = d.refresh_token;
+      localStorage.setItem('cpf_cfg2', JSON.stringify(cfg));
+    }
+  }catch(e){ console.warn('Refresh token falhou',e); }
+}
+
+// ══ SYNC ══
+async function syncML(){
+  loadCfg();
+  if(!cfg.token){ openConfig(); return; }
+
+  const btn = document.getElementById('syncBtn');
+  btn.disabled = true; btn.textContent = '↻ Buscando...';
+  setLoading(true);
+
+  try{
+    // Busca orders do usuário
+    const dateFilter = buildDateFilter();
+    let allOrders = [];
+    let offset = 0;
+    const limit = 50;
+    let total = 999;
+
+    while(offset < total && offset < 500){
+      btn.textContent = `↻ ${offset} pedidos...`;
+      const url = `/orders/search?seller=${cfg.userId}&sort=date_desc&offset=${offset}&limit=${limit}${dateFilter}`;
+      const data = await mlGet(url);
+      if(!data.results) break;
+      total = data.paging?.total || 0;
+      allOrders = allOrders.concat(data.results);
+      offset += limit;
+      if(data.results.length < limit) break;
+    }
+
+    // Busca detalhes financeiros de cada order (billing/financial)
+    const detailed = await Promise.all(allOrders.map(async order => {
+      try{
+        // Pega dados financeiros reais da order
+        const fin = await mlGet(`/orders/${order.id}/billing_info`);
+        return { ...order, billing: fin };
+      }catch{ return order; }
+    }));
+
+    processSales(detailed);
+    document.getElementById('infoBar').style.display='none';
+    document.getElementById('tbStatus').style.display='flex';
+    document.getElementById('sbTotal').textContent = detailed.length;
+    localStorage.setItem('cpf_ml_cache', JSON.stringify(detailed));
+
+  }catch(err){
+    setLoading(false,'⚠️','Erro ao conectar com o Mercado Livre',
+      err.message+'<br><br>Verifique o token nas Configurações.');
+  }
+
+  btn.disabled=false; btn.textContent='↻ Sincronizar ML';
+}
+
+function buildDateFilter(){
+  let f = '';
+  if(cfg.dateS) f += `&order.date_created.from=${cfg.dateS}T00:00:00.000-03:00`;
+  if(cfg.dateE) f += `&order.date_created.to=${cfg.dateE}T23:59:59.000-03:00`;
+  return f;
+}
+
+// ══ PROCESS ══
+function processSales(orders){
+  sales = orders.map(o => {
+    if(!o.id) return null;
+
+    const receita = parseFloat(o.total_amount)||0;
+    if(receita <= 0) return null;
+
+    // Taxas reais do ML
+    const mlFee = extractMLFee(o);
+    const freteMl = extractFrete(o);
+
+    // Custo do produto (se disponível nos order_items)
+    const cmv = extractCMV(o, receita);
+
+    // Nossos custos
+    const imposto = receita * (cfg.imp/100);
+    const op = cfg.op;
+
+    const totalCosts = cmv + mlFee + freteMl + imposto + op;
+    const lucro = receita - totalCosts;
+    const margem = receita>0 ? (lucro/receita)*100 : 0;
+
+    // Detecta possível cobrança indevida
+    const indevida = detectIndevida(o, mlFee, receita);
+
+    const produto = o.order_items?.[0]?.item?.title || o.order_items?.[0]?.item?.id || 'Produto';
+
+    return {
+      id: o.id,
+      date: (o.date_created||'').split('T')[0],
+      status: o.status,
+      produto: produto.slice(0,60),
+      qty: o.order_items?.reduce((a,i)=>a+(i.quantity||1),0)||1,
+      receita, cmv, mlFee, freteMl, imposto, op,
+      totalCosts, lucro, margem,
+      indevida,
+      indevidaVal: indevida ? indevida.valor : 0,
+      raw: o
+    };
+  }).filter(Boolean);
+
+  filtered = [...sales];
+  updatePlatCards();
+  updateKPIs();
+  updateConciliacao();
+  renderTable();
+}
+
+function extractMLFee(o){
+  // Tenta pegar a comissão real dos payments
+  let fee = 0;
+  if(o.payments?.length){
+    o.payments.forEach(p => {
+      if(p.marketplace_fee) fee += Math.abs(parseFloat(p.marketplace_fee)||0);
+    });
+  }
+  // Fallback: busca em order_items
+  if(fee===0 && o.order_items?.length){
+    o.order_items.forEach(item => {
+      if(item.sale_fee) fee += Math.abs(parseFloat(item.sale_fee)||0);
+    });
+  }
+  // Último fallback: estima pela categoria (14% padrão)
+  if(fee===0){
+    const rec = parseFloat(o.total_amount)||0;
+    fee = rec * 0.14;
+  }
+  return fee;
+}
+
+function extractFrete(o){
+  let frete = 0;
+  if(o.shipping?.cost) frete = Math.abs(parseFloat(o.shipping.cost)||0);
+  if(o.payments?.length){
+    o.payments.forEach(p => {
+      if(p.shipping_cost) frete = Math.max(frete, Math.abs(parseFloat(p.shipping_cost)||0));
+    });
+  }
+  return frete;
+}
+
+function extractCMV(o, receita){
+  // Tenta pegar o custo unitário cadastrado no ML
+  let cmv = 0;
+  if(o.order_items?.length){
+    o.order_items.forEach(item => {
+      const cost = parseFloat(item.item?.cost||0) * (item.quantity||1);
+      if(cost>0) cmv += cost;
+    });
+  }
+  if(cmv===0) cmv = receita * (cfg.cmvPct/100);
+  return cmv;
+}
+
+function detectIndevida(o, mlFeeReal, receita){
+  // Regra 1: taxa cobrada muito acima do esperado (>20% da receita)
+  const maxTaxa = receita * 0.20;
+  if(mlFeeReal > maxTaxa && receita > 0){
+    return {
+      tipo: 'Taxa acima do esperado',
+      descricao: `Comissão cobrada (${fmt(mlFeeReal)}) supera 20% da receita. Verifique se há dupla taxação ou taxa de devolução indevida.`,
+      valor: mlFeeReal - (receita * 0.16) // diferença vs taxa premium (pior caso)
+    };
+  }
+  // Regra 2: order cancelada mas com taxa cobrada
+  if((o.status==='cancelled') && mlFeeReal > 0){
+    return {
+      tipo: 'Taxa em pedido cancelado',
+      descricao: `Este pedido foi cancelado mas a taxa de ${fmt(mlFeeReal)} foi mantida. Possível estorno a recuperar.`,
+      valor: mlFeeReal
+    };
+  }
+  return null;
+}
+
+// ══ PLATFORM CARDS ══
+function updatePlatCards(){
+  const rec = sales.reduce((a,s)=>a+s.receita,0);
+  const luc = sales.reduce((a,s)=>a+s.lucro,0);
+  const marg = rec>0?(luc/rec)*100:0;
+  document.getElementById('pbRevTodos').textContent = fmt(rec);
+  document.getElementById('pbFillTodos').style.width = Math.max(0,Math.min(100,marg))+'%';
+  document.getElementById('pbPctTodos').textContent = pct(marg)+'%';
+
+  // ML é o único canal por enquanto
+  document.getElementById('pbRevML').textContent = fmt(rec);
+  document.getElementById('pbFillML').style.width = Math.max(0,Math.min(100,marg))+'%';
+  document.getElementById('pbPctML').textContent = pct(marg)+'%';
+}
+
+// ══ KPIs ══
+function updateKPIs(){
+  const src = filtered;
+  const rec = src.reduce((a,s)=>a+s.receita,0);
+  const com = src.reduce((a,s)=>a+s.mlFee,0);
+  const fre = src.reduce((a,s)=>a+s.freteMl,0);
+  const imp = src.reduce((a,s)=>a+s.imposto,0);
+  const luc = src.reduce((a,s)=>a+s.lucro,0);
+  const marg = rec>0?(luc/rec)*100:0;
+  const indevidas = src.filter(s=>s.indevida);
+  const totalIndev = indevidas.reduce((a,s)=>a+s.indevidaVal,0);
+
+  txt('kR', fmt(rec)); txt('kRs', src.length+' vendas');
+  txt('kC', fmt(com)); txt('kCs', pct(rec>0?com/rec*100:0)+'% receita');
+  txt('kF', fmt(fre)); txt('kFs', pct(rec>0?fre/rec*100:0)+'% receita');
+  txt('kI', fmt(imp)); txt('kIs', pct(rec>0?imp/rec*100:0)+'% receita');
+  const kl = document.getElementById('kL');
+  kl.textContent=fmt(luc); kl.className='kpi-val '+(luc>=0?'green':'red');
+  txt('kLs','margem '+pct(marg)+'%');
+  txt('kIndev', indevidas.length||'0');
+  txt('kIndevS','a recuperar: '+fmt(totalIndev));
+}
+
+// ══ CONCILIAÇÃO ══
+function updateConciliacao(){
+  const indevidas = sales.filter(s=>s.indevida);
+  const n = indevidas.length;
+  document.getElementById('sbAlerts').textContent = n||'0';
+  if(n>0){
+    document.getElementById('concilAlert').style.display='block';
+    document.getElementById('concilN').textContent = n;
+  }
+}
+
+function showConciliacao(){
+  const indevidas = sales.filter(s=>s.indevida);
+  if(!indevidas.length){ alert('Nenhuma cobrança suspeita encontrada!'); return; }
+  activeMargin = activeMargin==='indev'?null:'indev';
+  document.querySelectorAll('.chip').forEach(c=>c.classList.toggle('active', c.dataset.m==='indev' && activeMargin==='indev'));
+  renderTable();
+}
+
+// ══ TABLE ══
+function renderTable(){
+  const q = document.getElementById('searchInput').value.toLowerCase();
+  let src = sales.filter(s=>{
+    if(activePlat!=='Todos') return false; // só ML por ora
+    if(activeMargin==='good' && s.margem<=20) return false;
+    if(activeMargin==='warn' && (s.margem>20||s.margem<5)) return false;
+    if(activeMargin==='bad'  && s.margem>=5) return false;
+    if(activeMargin==='indev' && !s.indevida) return false;
+    if(q && !s.produto.toLowerCase().includes(q) && !String(s.id).includes(q)) return false;
+    return true;
+  });
+
+  src.sort((a,b)=>{
+    const av=a[sortCol], bv=b[sortCol];
+    return typeof av==='string'?av.localeCompare(bv)*sortDir:(av-bv)*sortDir;
+  });
+
+  filtered = src; updateKPIs();
+
+  const tot = Math.max(1,Math.ceil(src.length/PER));
+  page = Math.min(page,tot);
+  const slice = src.slice((page-1)*PER, page*PER);
+  document.getElementById('countLbl').textContent = src.length+' pedidos';
+
+  if(!src.length){
+    document.getElementById('twrap').innerHTML='<div class="empty"><div class="empty-ico">🔍</div><div class="empty-title">Nenhum resultado</div><div class="empty-desc">Ajuste os filtros ou a busca.</div></div>';
+    document.getElementById('pager').innerHTML=''; return;
+  }
+
+  const sa = c=>c===sortCol?(sortDir===1?' ↑':' ↓'):'';
+  const th=(c,l)=>`<th class="${c===sortCol?'sorted':''}" onclick="sortBy('${c}')">${l}${sa(c)}</th>`;
+
+  document.getElementById('twrap').innerHTML=`<table>
+    <thead><tr>
+      ${th('id','Pedido')}
+      ${th('date','Data')}
+      ${th('produto','Produto')}
+      ${th('qty','Qtd')}
+      ${th('receita','Receita')}
+      ${th('cmv','CMV')}
+      ${th('mlFee','Comissão ML')}
+      ${th('freteMl','Frete ML')}
+      ${th('imposto','Imposto')}
+      ${th('lucro','Lucro')}
+      ${th('margem','Margem')}
+      <th>Alerta</th>
+    </tr></thead>
+    <tbody>${slice.map(s=>`
+      <tr onclick="openDrawer(${s.id})">
+        <td class="mono text-dim">#${s.id}</td>
+        <td class="text-dim" style="font-size:11px">${s.date}</td>
+        <td style="max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${s.produto}">${s.produto}</td>
+        <td class="mono text-dim">${s.qty}</td>
+        <td class="mono" style="color:var(--blue)">${fmt(s.receita)}</td>
+        <td class="mono text-sub">${fmt(s.cmv)}</td>
+        <td class="mono" style="color:var(--amber)">${fmt(s.mlFee)}</td>
+        <td class="mono text-sub">${fmt(s.freteMl)}</td>
+        <td class="mono" style="color:var(--purple)">${fmt(s.imposto)}</td>
+        <td class="mono" style="color:${s.lucro>=0?'var(--green)':'var(--red)'};font-weight:700">${fmt(s.lucro)}</td>
+        <td>${mbarHtml(s.margem)}</td>
+        <td>${s.indevida?`<div class="flag-indevida">⚠ Verificar</div>`:''}</td>
+      </tr>`).join('')}
+    </tbody></table>`;
+
+  renderPager(tot);
+}
+
+function mbarHtml(m){
+  const cl = m>20?'g':m>=5?'w':'b';
+  return `<div class="mbar"><div class="mtrack"><div class="mfill ${cl}" style="width:${Math.max(0,Math.min(100,m))}%"></div></div><div class="mpct ${cl}">${pct(m)}%</div></div>`;
+}
+function renderPager(tot){
+  if(tot<=1){document.getElementById('pager').innerHTML='';return;}
+  let h=`<span class="pg-info">Pág ${page}/${tot}</span>`;
+  if(page>1)h+=`<button class="pgbtn" onclick="goPage(${page-1})">← Ant</button>`;
+  h+=`<button class="pgbtn cur">${page}</button>`;
+  if(page<tot)h+=`<button class="pgbtn" onclick="goPage(${page+1})">Próx →</button>`;
+  document.getElementById('pager').innerHTML=h;
+}
+function goPage(n){page=n;renderTable();}
+function sortBy(c){if(sortCol===c)sortDir*=-1;else{sortCol=c;sortDir=-1;}renderTable();}
+function setPlat(p,el){activePlat=p;document.querySelectorAll('.pb-card').forEach(x=>x.classList.toggle('active',x.dataset.p===p));page=1;renderTable();}
+function toggleMargin(m,el){activeMargin=activeMargin===m?null:m;document.querySelectorAll('.chip').forEach(x=>x.classList.toggle('active',x.dataset.m===activeMargin));page=1;renderTable();}
+
+// ══ DRAWER ══
+function openDrawer(id){
+  const s = sales.find(x=>x.id===id); if(!s) return;
+  const items=[
+    {l:'CMV (custo do produto)',  v:s.cmv,     c:'#6366F1'},
+    {l:'Comissão Mercado Livre',  v:s.mlFee,   c:'#F59E0B'},
+    {l:'Frete Mercado Livre',     v:s.freteMl, c:'#3B82F6'},
+    {l:`Simples Nacional (${pct(cfg.imp)}%)`,v:s.imposto,c:'#A855F7'},
+    {l:'Custo operacional fixo',  v:s.op,      c:'#4A5268'},
+    {l:'Lucro líquido',           v:Math.max(0,s.lucro), c:s.lucro>=0?'#22C55E':'#F43F5E'},
+  ];
+  const barSegs=items.map(i=>{const w=s.receita>0?Math.abs(i.v/s.receita*100):0;return`<div style="flex:${Math.max(.3,w)};background:${i.c}"></div>`;}).join('');
+  const legend=items.map(i=>`<div class="ana-row"><div class="ana-left"><div class="ana-dot" style="background:${i.c}"></div><span class="ana-name">${i.l}</span></div><div class="ana-right"><span class="ana-brl" style="color:${i.c}">${fmt(i.v)}</span><span class="ana-pct">${pct(s.receita>0?i.v/s.receita*100:0)}%</span></div></div>`).join('');
+  const mc=s.margem>20?'g':s.margem>=5?'w':'b';
+  const alertHtml = s.indevida?`<div class="alert-box"><div class="alert-title">⚠️ ${s.indevida.tipo}</div><div class="alert-desc">${s.indevida.descricao}</div><div class="alert-val">Possível recuperação: ${fmt(s.indevidaVal)}</div></div>`:'';
+
+  document.getElementById('drBody').innerHTML=`
+    <div class="dr-order">Pedido #${s.id} · ${s.date} · ${s.status||'–'}</div>
+    <div class="dr-product">${s.produto}</div>
+    <div class="dr-tags">
+      <div class="pbadge ML">Mercado Livre</div>
+      <span style="font-size:10px;color:var(--dim);padding:2px 6px;border:1px solid var(--b1);border-radius:4px">${s.qty} un.</span>
+    </div>
+    <div class="ana-label">Onde vai cada real</div>
+    <div class="ana-bar">${barSegs}</div>
+    <div class="ana-legend">${legend}</div>
+    <hr class="dr-divider">
+    <div class="dr-row"><span class="dr-row-lbl" style="font-weight:600">Receita</span><span class="dr-row-val blue">${fmt(s.receita)}</span></div>
+    <div class="dr-row"><span class="dr-row-lbl text-sub">Total custos</span><span class="dr-row-val amber">− ${fmt(s.totalCosts)}</span></div>
+    <hr class="dr-divider">
+    <div class="dr-row"><span class="dr-row-lbl" style="font-size:14px;font-weight:700">Lucro líquido</span><span class="dr-row-val ${s.lucro>=0?'green':'red'}" style="font-size:16px">${fmt(s.lucro)}</span></div>
+    <div class="dr-margem-box">
+      <div><div class="dmb-lbl">Margem de contribuição</div><div class="dmb-sub">${s.margem>20?'✅ Saudável':s.margem>=5?'⚠️ Atenção — revisar custos':'🔴 Abaixo do mínimo'}</div></div>
+      <div class="dmb-val ${mc}">${pct(s.margem)}%</div>
+    </div>
+    ${alertHtml}`;
+  document.getElementById('drawer').classList.add('open');
+}
+function closeDrawer(){document.getElementById('drawer').classList.remove('open');}
+
+// ══ LOADING ══
+function setLoading(show,ico='',title='',desc=''){
+  if(show){document.getElementById('twrap').innerHTML='<div class="empty"><div class="spin"></div><div class="empty-title">Buscando pedidos no Mercado Livre…</div><div class="empty-desc">Importando dados reais com taxas discriminadas.</div></div>';}
+  else{document.getElementById('twrap').innerHTML=`<div class="empty"><div class="empty-ico">${ico}</div><div class="empty-title">${title}</div><div class="empty-desc">${desc}</div></div>`;}
+}
+
+// ══ EXPORT ══
+function exportCSV(){
+  if(!filtered.length) return;
+  const h='Pedido;Data;Produto;Qtd;Receita;CMV;Comissão ML;Frete ML;Imposto;Op.Fixo;TotalCustos;Lucro;Margem%;Alerta';
+  const rows=filtered.map(s=>[s.id,s.date,`"${s.produto}"`,s.qty,s.receita,s.cmv,s.mlFee,s.freteMl,s.imposto,s.op,s.totalCosts,s.lucro,pct(s.margem),s.indevida?s.indevida.tipo:''].join(';'));
+  const blob=new Blob([h+'\n'+rows.join('\n')],{type:'text/csv;charset=utf-8;'});
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  a.download=`cpf_ml_${new Date().toISOString().slice(0,10)}.csv`;
+  a.click();
+}
+
+// ══ DEMO ══
+function loadDemo(){
+  const produtos=['Coleira Ajustável Premium','Ração Orgânica 15kg','Brinquedo Interativo Felino','Cama Ortopédica Pet G','Shampoo Hipoalergênico 500ml','Comedouro Automático WiFi','Kit Higiene Dental','Arranhador Sisal','Bebedouro Fonte','Casinha PVC'];
+  const statuses=['paid','paid','paid','paid','cancelled'];
+  const fake=Array.from({length:80},(_,i)=>{
+    const rec=45+Math.random()*220;
+    const fee=rec*(0.12+Math.random()*0.06);
+    const frete=Math.random()>.4?0:Math.random()*15;
+    const cmv=rec*(0.35+Math.random()*0.15);
+    const imp=rec*(cfg.imp/100);
+    const op=cfg.op;
+    const st=statuses[Math.floor(Math.random()*statuses.length)];
+    const totalC=cmv+fee+frete+imp+op;
+    const lucro=rec-totalC;
+    const margem=rec>0?(lucro/rec)*100:0;
+    // injevta algumas indevidas
+    const forceIndev = i%15===0;
+    const highFee = forceIndev?rec*0.22:fee;
+    const indevida = forceIndev?{tipo:'Taxa acima do esperado',descricao:'Comissão cobrada supera 20% da receita. Verifique possível dupla taxação.',valor:highFee-(rec*0.16)}:(st==='cancelled'&&Math.random()>.7?{tipo:'Taxa em pedido cancelado',descricao:'Pedido cancelado com taxa mantida. Solicite estorno.',valor:fee}:null);
+    return{
+      id:1000000+i,date:new Date(Date.now()-Math.random()*5184e6).toISOString().split('T')[0],
+      status:st,produto:produtos[i%produtos.length],qty:Math.ceil(Math.random()*2),
+      receita:rec,cmv,mlFee:forceIndev?highFee:fee,freteMl:frete,imposto:imp,op,
+      totalCosts:cmv+(forceIndev?highFee:fee)+frete+imp+op,
+      lucro:rec-(cmv+(forceIndev?highFee:fee)+frete+imp+op),
+      margem:rec>0?(lucro/rec)*100:margem,
+      indevida,indevidaVal:indevida?indevida.valor:0,raw:{}
+    };
+  });
+  sales=fake; filtered=[...fake];
+  updatePlatCards(); updateKPIs(); updateConciliacao(); renderTable();
+  document.getElementById('infoBar').style.display='none';
+  document.getElementById('sbTotal').textContent=fake.length;
+}
+
+// ══ UTILS ══
+function fmt(n){return'R$ '+(n||0).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});}
+function pct(n){return(n||0).toFixed(1);}
+function txt(id,v){const el=document.getElementById(id);if(el)el.textContent=v;}
+
+// ══ INIT ══
+(function(){
+  loadCfg();
+  const now=new Date();
+  if(!cfg.dateS){const s=new Date(now-30*864e5);document.getElementById('cDateS').value=s.toISOString().slice(0,10);}
+  if(!cfg.dateE){document.getElementById('cDateE').value=now.toISOString().slice(0,10);}
+  const cache=localStorage.getItem('cpf_ml_cache');
+  if(cache){
+    try{const d=JSON.parse(cache);if(d.length){processSales(d);document.getElementById('infoBar').style.display='none';document.getElementById('sbTotal').textContent=d.length;document.getElementById('tbStatus').style.display='flex';}}catch{}
+  }
+})();
+</script>
+</body>
+</html>
