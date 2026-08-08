@@ -11,7 +11,7 @@ const CLIENT_ID = '5798831532059966';
 const CLIENT_SECRET = 'qt5i8KjEWCMMECtWDspShpDktS9dWCeN';
 
 app.get('/', (req, res) => {
-  res.json({ status: 'CPF Hub API online', version: '8.0' });
+  res.json({ status: 'CPF Hub API online', version: '9.0' });
 });
 
 // Proxy GET genérico
@@ -202,18 +202,19 @@ app.get('/orders-full', async (req, res) => {
   }
 });
 
-// Busca pública ML (sem autenticação) — para Hunter Spy
+// Busca ML para Hunter Spy (usa token do header se disponível)
 app.get('/ml-public/*', async (req, res) => {
+  const token = req.headers['x-ml-token'];
   const path = req.params[0];
   const query = new URLSearchParams(req.query).toString();
   const url = `${ML_BASE}/${path}${query ? '?' + query : ''}`;
   try {
-    const r = await axios.get(url, {
-      headers: {
-        'Accept': 'application/json',
-        'User-Agent': 'Mozilla/5.0'
-      }
-    });
+    const headers = {
+      'Accept': 'application/json',
+      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+    };
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+    const r = await axios.get(url, { headers });
     res.json(r.data);
   } catch (err) {
     res.status(err.response?.status || 500).json(err.response?.data || { error: err.message });
@@ -242,4 +243,4 @@ app.post('/ml/oauth/refresh', async (req, res) => {
 });
 
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log(`CPF Hub v8.0 rodando na porta ${PORT}`));
+app.listen(PORT, () => console.log(`CPF Hub v9.0 rodando na porta ${PORT}`));
