@@ -636,11 +636,8 @@ function processSales(orders){
     const op=cfg.op;
     const lucro=netReceived-cmv-imposto-op;
     const margem=receita>0?(lucro/receita)*100:0;
-    // Flex: tag "fulfillment" não, mas "self_service_reship" ou logistic_type "self_service" = Flex
-    const tags = o.tags||[];
-    const isFlex = tags.includes('self_service_reship') || 
-                   o.shipping?.logistic_type === 'self_service' ||
-                   tags.includes('me2') || tags.includes('flex');
+    // Flex detectado pelo servidor via shipment.logistic_type === 'self_service'
+    const isFlex = fin.is_flex || false;
     
     // Se Flex: ML reembolsa o frete do comprador (já no netReceived)
     // mas seller ainda paga a transportadora
@@ -650,12 +647,13 @@ function processSales(orders){
     const indevida=detectIndevida(mlFee,receita,o.status);
 
     const estorno=flexEstorno;
+    const bonusEnvio=fin.bonus_envio||0;
     const mlFeePct=fin.ml_fee_pct||0;
     const mlFeeFixed=fin.ml_fee_fixed||0;
     // Recalcula lucro incluindo custo Flex
     const lucroFinal = netReceived + estorno - cmv - imposto - op - flexCusto;
     const margemFinal = receita>0?(lucroFinal/receita)*100:0;
-    return{id:o.id,date:(o.date_created||'').split('T')[0],status:o.status,produto,sku,qty,receita,mlFee,mlFeePct,mlFeeFixed,freteMl,netReceived,estorno,flexCusto,isFlex,cmv,hasCost,imposto,op,totalC:cmv+mlFee+freteMl+imposto+op+flexCusto,lucro:lucroFinal,margem:margemFinal,indevida,indevidaVal:indevida?indevida.valor:0,_is_pack:fin.is_pack||false,_pack_id:fin.pack_id||null};
+    return{id:o.id,date:(o.date_created||'').split('T')[0],status:o.status,produto,sku,qty,receita,mlFee,mlFeePct,mlFeeFixed,freteMl,netReceived,estorno,bonusEnvio,flexCusto,isFlex,cmv,hasCost,imposto,op,totalC:cmv+mlFee+freteMl+imposto+op+flexCusto,lucro:lucroFinal,margem:margemFinal,indevida,indevidaVal:indevida?indevida.valor:0,_is_pack:fin.is_pack||false,_pack_id:fin.pack_id||null};
   }).filter(Boolean);
   filtered=[...sales];
   updateCards();updateKPIs();updateAlerts();renderTable();
