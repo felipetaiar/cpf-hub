@@ -11,11 +11,11 @@ app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
 const ML_BASE = 'https://api.mercadolibre.com';
-const CLIENT_ID = '5798831532059966';
-const CLIENT_SECRET = 'qt5i8KjEWCMMECtWDspShpDktS9dWCeN';
+const CLIENT_ID = '6586109675721603';
+const CLIENT_SECRET = 'z5T3D01Ry6Noe8XuudH9NNxLZDxbuUBJ';
 
 app.get('/', (req, res) => {
-  res.json({ status: 'CPF Hub API online', version: '10.0' });
+  res.json({ status: 'CPF Hub API online', version: '12.0' });
 });
 
 // Proxy GET genérico
@@ -206,19 +206,93 @@ app.get('/orders-full', async (req, res) => {
   }
 });
 
-// Busca ML para Hunter Spy (usa token do header se disponível)
-app.get('/ml-public/*', async (req, res) => {
+// Hunter Spy — trends, highlights, categorias (endpoints disponíveis com nosso APP)
+app.get('/spy/trends', async (req, res) => {
   const token = req.headers['x-ml-token'];
-  const path = req.params[0];
-  const query = new URLSearchParams(req.query).toString();
-  const url = `${ML_BASE}/${path}${query ? '?' + query : ''}`;
+  if (!token) return res.status(401).json({ error: 'Token não informado' });
   try {
-    const headers = {
-      'Accept': 'application/json',
-      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
-    };
-    if (token) headers['Authorization'] = `Bearer ${token}`;
-    const r = await axios.get(url, { headers });
+    const r = await axios.get(`${ML_BASE}/trends/MLB`, {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+    res.json(r.data);
+  } catch (err) {
+    res.status(err.response?.status || 500).json(err.response?.data || { error: err.message });
+  }
+});
+
+// Busca itens do próprio seller para análise
+app.get('/spy/my-items', async (req, res) => {
+  const token = req.headers['x-ml-token'];
+  if (!token) return res.status(401).json({ error: 'Token não informado' });
+  const { seller_id, limit = 50, offset = 0 } = req.query;
+  try {
+    const r = await axios.get(
+      `${ML_BASE}/users/${seller_id}/items/search?limit=${limit}&offset=${offset}`,
+      { headers: { Authorization: `Bearer ${token}` } }
+    );
+    // Busca detalhes de cada item
+    const ids = r.data.results || [];
+    if (!ids.length) return res.json({ results: [], paging: r.data.paging });
+    const details = await axios.get(
+      `${ML_BASE}/items?ids=${ids.join(',')}`,
+      { headers: { Authorization: `Bearer ${token}` } }
+    ).then(d => d.data).catch(() => []);
+    res.json({ results: details.map(d => d.body || d), paging: r.data.paging });
+  } catch (err) {
+    res.status(err.response?.status || 500).json(err.response?.data || { error: err.message });
+  }
+});
+
+// Detalhes de um item específico (concorrente via ID ou URL)
+app.get('/spy/item/:id', async (req, res) => {
+  const token = req.headers['x-ml-token'];
+  if (!token) return res.status(401).json({ error: 'Token não informado' });
+  try {
+    const [item, desc] = await Promise.all([
+      axios.get(`${ML_BASE}/items/${req.params.id}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      }).then(r => r.data).catch(() => null),
+      axios.get(`${ML_BASE}/items/${req.params.id}/description`, {
+        headers: { Authorization: `Bearer ${token}` }
+      }).then(r => r.data).catch(() => null),
+    ]);
+    res.json({ item, description: desc });
+  } catch (err) {
+    res.status(err.response?.status || 500).json(err.response?.data || { error: err.message });
+  }
+});
+
+// Highlights (destaques) do ML por categoria
+app.get('/spy/highlights', async (req, res) => {
+  const token = req.headers['x-ml-token'];
+  if (!token) return res.status(401).json({ error: 'Token não informado' });
+  const { category = 'MLB1092' } = req.query; // pet shop padrão
+  try {
+    const r = await axios.get(`${ML_BASE}/highlights/MLB/category/${category}`, {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+    // Busca detalhes
+    const ids = (r.data.content || []).map(i => i.id).slice(0, 20);
+    if (!ids.length) return res.json({ results: [] });
+    const details = await axios.get(
+      `${ML_BASE}/items?ids=${ids.join(',')}`,
+      { headers: { Authorization: `Bearer ${token}` } }
+    ).then(d => d.data).catch(() => []);
+    res.json({ results: details.map(d => d.body || d) });
+  } catch (err) {
+    res.status(err.response?.status || 500).json(err.response?.data || { error: err.message });
+  }
+});
+
+// Visitas dos meus anúncios
+app.get('/spy/visits/:id', async (req, res) => {
+  const token = req.headers['x-ml-token'];
+  if (!token) return res.status(401).json({ error: 'Token não informado' });
+  try {
+    const r = await axios.get(
+      `${ML_BASE}/items/${req.params.id}/visits/time_window?last=30&unit=day&ending=now`,
+      { headers: { Authorization: `Bearer ${token}` } }
+    );
     res.json(r.data);
   } catch (err) {
     res.status(err.response?.status || 500).json(err.response?.data || { error: err.message });
@@ -247,4 +321,4 @@ app.post('/ml/oauth/refresh', async (req, res) => {
 });
 
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log(`CPF Hub v10.0 rodando na porta ${PORT}`));
+app.listen(PORT, () => console.log(`CPF Hub v12.0 rodando na porta ${PORT}`));
