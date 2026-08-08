@@ -861,14 +861,13 @@ function openDrawer(id){
     ${s.mlFeePct>0 ? '<div class="dr-row" style="padding:2px 0 2px 12px"><span class="dr-row-lbl text-dim" style="font-size:11px">↳ Comissão '+(s.receita>0?(s.mlFeePct/s.receita*100).toFixed(1):0)+'% da venda</span><span style="font-family:JetBrains Mono,monospace;font-size:11px;color:var(--amber)">− '+fmt(s.mlFeePct)+'</span></div>' : ''}
     ${s.mlFeeFixed>0 ? '<div class="dr-row" style="padding:2px 0 2px 12px"><span class="dr-row-lbl text-dim" style="font-size:11px">↳ Custo fixo ML</span><span style="font-family:JetBrains Mono,monospace;font-size:11px;color:var(--amber)">− '+fmt(s.mlFeeFixed)+'</span></div>' : ''}
     <div class="dr-row"><span class="dr-row-lbl text-sub">Frete ML</span><span class="dr-row-val amber">− ${fmt(s.freteMl)}</span></div>
-    ${s.estorno>0?'<div class="dr-row"><span class="dr-row-lbl text-sub" style="color:var(--green)">Estorno/Reembolso ML</span><span class="dr-row-val green">+ '+fmt(s.estorno)+'</span></div>':''}
+    ${s.bonusEnvio>0 ? '<div class="dr-row"><span class="dr-row-lbl text-sub" style="color:var(--green)">🎁 Bônus por envio ML</span><span class="dr-row-val green">+ '+fmt(s.bonusEnvio)+'</span></div>' : ''}
     <div class="dr-row"><span class="dr-row-lbl" style="font-weight:600">= Recebido do ML</span><span class="dr-row-val blue">${fmt(s.netReceived)}</span></div>
     <hr class="dr-divider">
     <div class="dr-row"><span class="dr-row-lbl text-sub">CMV${s.hasCost?' (real)':' (~estimado)'}</span><span class="dr-row-val amber">− ${fmt(s.cmv)}</span></div>
     <div class="dr-row"><span class="dr-row-lbl text-sub">Simples Nacional</span><span class="dr-row-val amber">− ${fmt(s.imposto)}</span></div>
     <div class="dr-row"><span class="dr-row-lbl text-sub">Custo operacional</span><span class="dr-row-val amber">− ${fmt(s.op)}</span></div>
-    ${s.isFlex ? '<div class="dr-row"><span class="dr-row-lbl text-sub" style="color:var(--blue)">🚴 Custo transportadora Flex</span><span class="dr-row-val amber">− '+fmt(s.flexCusto)+'</span></div>' : ''}
-    ${s.estorno>0 ? '<div class="dr-row"><span class="dr-row-lbl text-sub" style="color:var(--green)">Estorno frete ML (Flex)</span><span class="dr-row-val green">+ '+fmt(s.estorno)+'</span></div>' : ''}
+    ${s.isFlex && s.flexCusto>0 ? '<div class="dr-row"><span class="dr-row-lbl text-sub" style="color:var(--blue)">🚴 Custo transportadora Flex</span><span class="dr-row-val amber">− '+fmt(s.flexCusto)+'</span></div>' : ''}
     <hr class="dr-divider">
     <div class="dr-row"><span class="dr-row-lbl" style="font-size:13px;font-weight:700">Lucro líquido</span><span class="dr-row-val ${s.lucro>=0?'green':'red'}" style="font-size:15px">${fmt(s.lucro)}</span></div>
     <div class="dr-margem-box">
