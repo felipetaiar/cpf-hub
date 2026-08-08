@@ -1,0 +1,647 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CPF Hub · Hunter Spy</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap');
+:root{
+  --bg:#0D0F14;--s1:#13161D;--s2:#181C25;--s3:#1E2330;
+  --b1:rgba(255,255,255,.06);--b2:rgba(255,255,255,.11);
+  --text:#F1F3F8;--sub:#8B93A7;--dim:#4A5268;
+  --green:#22C55E;--gbg:rgba(34,197,94,.1);--gborder:rgba(34,197,94,.2);
+  --red:#F43F5E;--rbg:rgba(244,63,94,.1);
+  --amber:#F59E0B;--abg:rgba(245,158,11,.1);
+  --blue:#3B82F6;--bbg:rgba(59,130,246,.1);
+  --purple:#A855F7;--ml:#FFE600;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);font-size:13px;min-height:100vh}
+
+/* TOPBAR */
+.topbar{height:50px;background:var(--s1);border-bottom:1px solid var(--b1);display:flex;align-items:center;gap:12px;padding:0 20px;position:sticky;top:0;z-index:50}
+.tb-logo{width:28px;height:28px;border-radius:7px;background:var(--green);display:flex;align-items:center;justify-content:center;font-weight:800;font-size:11px;color:#000}
+.tb-title{font-size:13px;font-weight:700}
+.tb-badge{font-size:10px;font-weight:700;background:var(--rbg);color:var(--red);border:1px solid rgba(244,63,94,.2);padding:2px 7px;border-radius:10px}
+.tb-space{flex:1}
+.btn{display:inline-flex;align-items:center;gap:5px;padding:6px 13px;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer;border:none;font-family:inherit;transition:all .15s;white-space:nowrap}
+.btn-ghost{background:var(--s3);color:var(--sub);border:1px solid var(--b2)}
+.btn-ghost:hover{color:var(--text)}
+.btn-green{background:var(--green);color:#000}
+.btn-green:hover{filter:brightness(1.08)}
+.btn-green:disabled{opacity:.4;cursor:not-allowed;filter:none}
+.btn-sm{padding:5px 10px;font-size:11px}
+
+/* SEARCH HERO */
+.search-hero{padding:28px 24px 20px;background:var(--s1);border-bottom:1px solid var(--b1)}
+.sh-title{font-size:18px;font-weight:700;margin-bottom:4px}
+.sh-sub{font-size:12px;color:var(--sub);margin-bottom:18px}
+.sh-row{display:flex;gap:8px;flex-wrap:wrap}
+.sh-input{
+  flex:1;min-width:260px;padding:10px 14px;
+  background:var(--s2);border:1px solid var(--b1);border-radius:8px;
+  color:var(--text);font-family:inherit;font-size:14px;outline:none;
+  transition:border-color .15s;
+}
+.sh-input:focus{border-color:var(--green)}
+.sh-input::placeholder{color:var(--dim)}
+.sh-select{
+  padding:10px 12px;background:var(--s2);border:1px solid var(--b1);
+  border-radius:8px;color:var(--text);font-family:inherit;font-size:13px;outline:none;
+}
+.sh-select:focus{border-color:var(--green)}
+.sh-select option{background:var(--s2)}
+
+/* FILTERS */
+.filters-bar{padding:10px 24px;background:var(--s2);border-bottom:1px solid var(--b1);display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.f-label{font-size:10px;font-weight:700;letter-spacing:.5px;color:var(--dim);text-transform:uppercase}
+.fchip{padding:4px 9px;border-radius:14px;font-size:11px;font-weight:600;border:1px solid var(--b1);color:var(--dim);cursor:pointer;transition:all .12s;white-space:nowrap}
+.fchip:hover{border-color:var(--b2);color:var(--sub)}
+.fchip.active{border-color:var(--green);color:var(--green);background:var(--gbg)}
+.sort-select{padding:4px 8px;background:var(--s2);border:1px solid var(--b1);border-radius:6px;color:var(--sub);font-family:inherit;font-size:11px;outline:none;margin-left:auto}
+
+/* CONTENT */
+.content{display:flex;gap:0;min-height:calc(100vh - 130px)}
+
+/* RESULTS PANEL */
+.results-panel{flex:1;min-width:0;overflow-y:auto}
+
+/* DETAIL PANEL */
+.detail-panel{
+  width:360px;flex-shrink:0;background:var(--s1);border-left:1px solid var(--b1);
+  overflow-y:auto;position:sticky;top:50px;height:calc(100vh - 50px);
+}
+
+/* KPI STRIP */
+.kpi-strip{display:flex;border-bottom:1px solid var(--b1);background:var(--s1);flex-shrink:0}
+.kpi{flex:1;padding:10px 16px;border-right:1px solid var(--b1)}
+.kpi:last-child{border-right:none}
+.kpi-lbl{font-size:10px;font-weight:700;letter-spacing:.5px;color:var(--dim);text-transform:uppercase;margin-bottom:3px}
+.kpi-val{font-size:16px;font-weight:700;font-variant-numeric:tabular-nums;font-family:'JetBrains Mono',monospace}
+.kpi-val.green{color:var(--green)}.kpi-val.amber{color:var(--amber)}.kpi-val.blue{color:var(--blue)}.kpi-val.red{color:var(--red)}
+.kpi-sub{font-size:10px;color:var(--dim);margin-top:2px}
+
+/* PRODUCT CARDS */
+.prod-list{padding:14px}
+.prod-card{
+  background:var(--s1);border:1px solid var(--b1);border-radius:9px;
+  padding:14px;margin-bottom:10px;cursor:pointer;transition:all .15s;
+  display:flex;gap:14px;align-items:flex-start;
+}
+.prod-card:hover,.prod-card.active{border-color:var(--b2);background:var(--s2)}
+.prod-card.active{border-color:var(--green)}
+.prod-rank{
+  width:24px;height:24px;border-radius:6px;background:var(--s3);
+  display:flex;align-items:center;justify-content:center;
+  font-size:10px;font-weight:700;color:var(--dim);flex-shrink:0;margin-top:2px;
+}
+.prod-rank.top{background:var(--gbg);color:var(--green)}
+.prod-img{width:52px;height:52px;border-radius:6px;object-fit:cover;flex-shrink:0;background:var(--s3)}
+.prod-info{flex:1;min-width:0}
+.prod-title{font-size:12px;font-weight:600;line-height:1.4;margin-bottom:6px;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
+.prod-meta{display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-bottom:8px}
+.prod-badge{font-size:10px;font-weight:700;padding:2px 6px;border-radius:4px}
+.badge-ml{background:rgba(255,230,0,.1);color:var(--ml)}
+.badge-full{background:rgba(34,197,94,.1);color:var(--green)}
+.badge-prem{background:rgba(168,85,247,.1);color:var(--purple)}
+.badge-class{background:rgba(59,130,246,.1);color:var(--blue)}
+.badge-free{background:rgba(139,147,167,.1);color:var(--sub)}
+.prod-stats{display:flex;gap:12px;align-items:center}
+.prod-price{font-family:'JetBrains Mono';font-size:15px;font-weight:700;color:var(--text)}
+.prod-sales{font-size:11px;color:var(--sub)}
+.prod-seller{font-size:10px;color:var(--dim);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:140px}
+.prod-revenue{font-size:11px;font-weight:700;color:var(--green);font-family:'JetBrains Mono'}
+/* Score bar */
+.score-wrap{display:flex;align-items:center;gap:6px;margin-top:6px}
+.score-track{flex:1;height:3px;background:var(--s3);border-radius:2px;overflow:hidden}
+.score-fill{height:100%;border-radius:2px}
+.score-val{font-size:10px;font-weight:700;min-width:24px;text-align:right;font-family:'JetBrains Mono'}
+
+/* DETAIL PANEL CONTENT */
+.dp-header{padding:16px;border-bottom:1px solid var(--b1)}
+.dp-empty{display:flex;flex-direction:column;align-items:center;justify-content:center;height:300px;color:var(--dim);font-size:12px;text-align:center;gap:8px}
+.dp-empty-ico{font-size:32px}
+.dp-title{font-size:13px;font-weight:700;line-height:1.4;margin-bottom:6px}
+.dp-meta{display:flex;gap:5px;flex-wrap:wrap;margin-bottom:12px}
+.dp-price{font-size:22px;font-weight:800;color:var(--text);font-family:'JetBrains Mono';letter-spacing:-.5px;margin-bottom:14px}
+
+.dp-section{padding:14px 16px;border-bottom:1px solid var(--b1)}
+.dp-sec-title{font-size:10px;font-weight:700;letter-spacing:.8px;color:var(--dim);text-transform:uppercase;margin-bottom:10px}
+.dp-row{display:flex;justify-content:space-between;align-items:center;padding:5px 0;border-bottom:1px solid rgba(255,255,255,.04)}
+.dp-row:last-child{border-bottom:none}
+.dp-row-lbl{font-size:12px;color:var(--sub)}
+.dp-row-val{font-size:12px;font-weight:600;font-family:'JetBrains Mono';font-variant-numeric:tabular-nums}
+
+/* OPPORTUNITY SCORE */
+.opp-score{
+  background:var(--s2);border:1px solid var(--b1);border-radius:8px;
+  padding:14px;margin:14px 16px;display:flex;align-items:center;justify-content:space-between;
+}
+.opp-label{font-size:11px;color:var(--sub);margin-bottom:4px}
+.opp-sub{font-size:10px;color:var(--dim)}
+.opp-val{font-size:28px;font-weight:800;font-family:'JetBrains Mono';letter-spacing:-1px}
+.opp-val.g{color:var(--green)}.opp-val.w{color:var(--amber)}.opp-val.b{color:var(--red)}
+
+/* CALC BLOCK */
+.calc-block{padding:0 16px 14px}
+.calc-title{font-size:10px;font-weight:700;letter-spacing:.8px;color:var(--dim);text-transform:uppercase;margin-bottom:10px}
+.calc-row{display:flex;align-items:center;gap:8px;margin-bottom:8px}
+.calc-label{font-size:11px;color:var(--sub);flex:1}
+.calc-input{width:90px;padding:5px 8px;background:var(--s2);border:1px solid var(--b1);border-radius:5px;color:var(--text);font-family:'JetBrains Mono';font-size:12px;outline:none;text-align:right}
+.calc-input:focus{border-color:var(--green)}
+.calc-result{background:var(--s3);border-radius:7px;padding:10px 12px;margin-top:8px}
+.calc-result-row{display:flex;justify-content:space-between;padding:3px 0;font-size:11px}
+.calc-result-val{font-family:'JetBrains Mono';font-weight:600}
+.calc-lucro{display:flex;justify-content:space-between;padding:8px 0 0;border-top:1px solid var(--b2);margin-top:4px;font-size:13px;font-weight:700}
+
+/* LOADING */
+.loading{text-align:center;padding:50px 20px;color:var(--dim)}
+.spin{display:inline-block;width:22px;height:22px;border:2px solid var(--b2);border-top-color:var(--green);border-radius:50%;animation:spin .65s linear infinite;margin-bottom:10px}
+@keyframes spin{to{transform:rotate(360deg)}}
+.load-title{font-size:13px;font-weight:600;color:var(--sub);margin-bottom:4px}
+.load-desc{font-size:11px;color:var(--dim)}
+
+/* HISTORY */
+.history-bar{padding:10px 24px;border-bottom:1px solid var(--b1);display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+.hist-chip{padding:4px 9px;border-radius:14px;font-size:11px;font-weight:500;border:1px solid var(--b1);color:var(--sub);cursor:pointer;transition:all .12s;display:flex;align-items:center;gap:4px}
+.hist-chip:hover{border-color:var(--b2);color:var(--text)}
+.hist-x{color:var(--dim);font-size:13px}
+.hist-x:hover{color:var(--red)}
+
+/* SELLER CARD */
+.seller-card{padding:10px 12px;background:var(--s2);border-radius:6px;border:1px solid var(--b1);margin:0 16px 14px}
+.seller-name{font-size:12px;font-weight:600;margin-bottom:4px}
+.seller-rep{display:flex;align-items:center;gap:5px;font-size:11px}
+.rep-dot{width:8px;height:8px;border-radius:50%}
+
+@media(max-width:800px){.detail-panel{display:none}.kpi{min-width:100px}}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="tb-logo">CP</div>
+  <div class="tb-title">Hunter Spy · Pesquisa de Mercado</div>
+  <div class="tb-badge">🔍 ESPIÃO</div>
+  <div class="tb-space"></div>
+  <button class="btn btn-ghost btn-sm" onclick="history.back()">← Voltar</button>
+</div>
+
+<!-- SEARCH HERO -->
+<div class="search-hero">
+  <div class="sh-title">Espione qualquer nicho do Mercado Livre</div>
+  <div class="sh-sub">Descubra volume de vendas, preço médio, concorrentes e oportunidades de mercado em tempo real</div>
+  <div id="tokenStatus" style="font-size:11px;color:var(--dim);margin-bottom:10px"></div>
+  <div class="sh-row">
+    <input class="sh-input" id="searchInput" type="text" placeholder='Ex: "coleira cachorro", "antipulgas gatos", "ração orgânica"...'
+      onkeydown="if(event.key==='Enter')doSearch()">
+    <select class="sh-select" id="sortSelect" onchange="sortResults()">
+      <option value="relevance">Relevância</option>
+      <option value="price_asc">Menor preço</option>
+      <option value="price_desc">Maior preço</option>
+      <option value="sold_desc">Mais vendidos</option>
+    </select>
+    <button class="btn btn-green" id="searchBtn" onclick="doSearch()">🔍 Pesquisar</button>
+  </div>
+</div>
+
+<!-- HISTORY -->
+<div class="history-bar" id="historyBar" style="display:none">
+  <span style="font-size:10px;font-weight:700;color:var(--dim);letter-spacing:.5px;text-transform:uppercase">Recentes:</span>
+  <div id="histChips"></div>
+</div>
+
+<!-- FILTERS -->
+<div class="filters-bar" id="filtersBar" style="display:none">
+  <span class="f-label">Anúncio:</span>
+  <div class="fchip active" data-f="all" onclick="toggleFilter('listing',this)">Todos</div>
+  <div class="fchip" data-f="gold_pro" onclick="toggleFilter('listing',this)">Premium</div>
+  <div class="fchip" data-f="gold_special" onclick="toggleFilter('listing',this)">Clássico</div>
+  <div class="fchip" data-f="free" onclick="toggleFilter('listing',this)">Grátis</div>
+  <span class="f-label" style="margin-left:10px">Frete:</span>
+  <div class="fchip" data-f="free_shipping" onclick="toggleFilter('shipping',this)">Grátis</div>
+  <div class="fchip" data-f="full" onclick="toggleFilter('shipping',this)">Full</div>
+  <select class="sort-select" id="sortSelect2" onchange="sortResults()">
+    <option value="relevance">Ordenar: Relevância</option>
+    <option value="price_asc">Menor preço</option>
+    <option value="price_desc">Maior preço</option>
+    <option value="sold_desc">Mais vendidos</option>
+    <option value="revenue_desc">Maior faturamento</option>
+  </select>
+</div>
+
+<!-- KPI STRIP -->
+<div class="kpi-strip" id="kpiStrip" style="display:none">
+  <div class="kpi"><div class="kpi-lbl">Produtos encontrados</div><div class="kpi-val blue" id="kN">–</div><div class="kpi-sub" id="kNs">–</div></div>
+  <div class="kpi"><div class="kpi-lbl">Preço médio</div><div class="kpi-val" id="kP">–</div><div class="kpi-sub" id="kPs">–</div></div>
+  <div class="kpi"><div class="kpi-lbl">Vendas estimadas/mês</div><div class="kpi-val green" id="kV">–</div><div class="kpi-sub" id="kVs">top 50 produtos</div></div>
+  <div class="kpi"><div class="kpi-lbl">Faturamento estimado/mês</div><div class="kpi-val amber" id="kR">–</div><div class="kpi-sub" id="kRs">mercado total visível</div></div>
+  <div class="kpi"><div class="kpi-lbl">Com frete grátis</div><div class="kpi-val" id="kFG">–</div><div class="kpi-sub">do total</div></div>
+</div>
+
+<!-- MAIN CONTENT -->
+<div class="content">
+  <!-- RESULTS -->
+  <div class="results-panel" id="resultsPanel">
+    <div style="text-align:center;padding:60px 20px;color:var(--dim)">
+      <div style="font-size:36px;margin-bottom:12px">🕵️</div>
+      <div style="font-size:14px;font-weight:600;color:var(--sub);margin-bottom:6px">Hunter Spy pronto para pesquisar</div>
+      <div style="font-size:12px;line-height:1.7">Digite um produto ou nicho acima e descubra<br>o que os concorrentes estão vendendo no ML</div>
+    </div>
+  </div>
+
+  <!-- DETAIL -->
+  <div class="detail-panel" id="detailPanel">
+    <div class="dp-header"><div style="font-size:12px;font-weight:600;color:var(--sub)">Selecione um produto para ver detalhes</div></div>
+    <div class="dp-empty">
+      <div class="dp-empty-ico">👆</div>
+      <div>Clique em um produto<br>para ver análise completa</div>
+    </div>
+  </div>
+</div>
+
+<script>
+const ML_PROXY = 'https://cpf-hub-6w8g.onrender.com';
+let results = [], filtered_results = [], selectedItem = null;
+let activeFilters = { listing: 'all', shipping: null };
+let searchHistory = JSON.parse(localStorage.getItem('spy_history')||'[]');
+
+// ── SEARCH ──
+async function doSearch(){
+  const q = document.getElementById('searchInput').value.trim();
+  if(!q) return;
+
+  saveHistory(q);
+  document.getElementById('searchBtn').disabled = true;
+  document.getElementById('searchBtn').textContent = '🔍 Buscando...';
+  document.getElementById('filtersBar').style.display = 'none';
+  document.getElementById('kpiStrip').style.display = 'none';
+
+  document.getElementById('resultsPanel').innerHTML = `
+    <div class="loading">
+      <div class="spin"></div>
+      <div class="load-title">Buscando no Mercado Livre…</div>
+      <div class="load-desc">Coletando preços, vendas e dados dos concorrentes</div>
+    </div>`;
+
+  try {
+    // Busca via proxy (sem autenticação — API pública)
+    const cfg = JSON.parse(localStorage.getItem('cpf_cfg6')||'{}');
+    const token = cfg.token||'';
+    const url = `${ML_PROXY}/ml-public/sites/MLB/search?q=${encodeURIComponent(q)}&limit=50`;
+    const r = await fetch(url, { headers: token ? {'x-ml-token': token} : {} });
+    const data = await r.json();
+
+    if(!data.results || data.results.length === 0){
+      document.getElementById('resultsPanel').innerHTML = `
+        <div style="text-align:center;padding:50px;color:var(--dim)">
+          <div style="font-size:32px;margin-bottom:10px">🔍</div>
+          <div style="font-size:13px;color:var(--sub);margin-bottom:4px">Nenhum resultado encontrado</div>
+          <div style="font-size:11px">Tente termos diferentes</div>
+        </div>`;
+      return;
+    }
+
+    results = data.results.map((item, i) => enrichItem(item, i));
+    applyFiltersAndRender();
+    renderKPIs();
+    document.getElementById('filtersBar').style.display = 'flex';
+    document.getElementById('kpiStrip').style.display = 'flex';
+
+  } catch(err) {
+    document.getElementById('resultsPanel').innerHTML = `
+      <div style="text-align:center;padding:50px;color:var(--dim)">
+        <div style="font-size:32px;margin-bottom:10px">⚠️</div>
+        <div style="font-size:13px;color:var(--sub);margin-bottom:4px">Erro ao pesquisar</div>
+        <div style="font-size:11px">${err.message}<br><br>Verifique se o servidor proxy está online.</div>
+      </div>`;
+  }
+
+  document.getElementById('searchBtn').disabled = false;
+  document.getElementById('searchBtn').textContent = '🔍 Pesquisar';
+}
+
+// ── ENRICH ──
+function enrichItem(item, idx){
+  const price = parseFloat(item.price)||0;
+  const sold  = parseInt(item.sold_quantity||0);
+  const revenue = price * sold;
+
+  // Score de oportunidade (0-100)
+  // Fatores: volume de vendas, preço, reputação do seller, tipo de anúncio
+  let score = 0;
+  if(sold > 100) score += 25;
+  else if(sold > 50) score += 15;
+  else if(sold > 10) score += 8;
+  if(price >= 30 && price <= 300) score += 20; // faixa de preço saudável
+  if(item.shipping?.free_shipping) score += 15;
+  if(item.listing_type_id === 'gold_special') score += 10;
+  if(item.listing_type_id === 'gold_pro') score += 5;
+  const sellerRep = item.seller?.seller_reputation?.power_seller_status;
+  if(!sellerRep) score += 25; // nicho sem dominância de platinum sellers
+  else if(sellerRep === 'silver') score += 10;
+  score = Math.min(100, score);
+
+  return {
+    ...item,
+    _idx: idx + 1,
+    _price: price,
+    _sold: sold,
+    _revenue: revenue,
+    _score: score,
+    _listingLabel: item.listing_type_id === 'gold_pro' ? 'Premium' :
+                   item.listing_type_id === 'gold_special' ? 'Clássico' : 'Grátis',
+  };
+}
+
+// ── FILTERS ──
+function toggleFilter(type, el){
+  const f = el.dataset.f;
+  if(type === 'listing'){
+    activeFilters.listing = activeFilters.listing === f ? 'all' : f;
+    document.querySelectorAll('[data-f="all"],[data-f="gold_pro"],[data-f="gold_special"],[data-f="free"]')
+      .forEach(x=>x.classList.toggle('active', x.dataset.f === activeFilters.listing));
+  } else {
+    activeFilters.shipping = activeFilters.shipping === f ? null : f;
+    document.querySelectorAll('[data-f="free_shipping"],[data-f="full"]')
+      .forEach(x=>x.classList.toggle('active', x.dataset.f === activeFilters.shipping));
+  }
+  applyFiltersAndRender();
+}
+
+function applyFiltersAndRender(){
+  filtered_results = results.filter(item => {
+    if(activeFilters.listing !== 'all' && item.listing_type_id !== activeFilters.listing) return false;
+    if(activeFilters.shipping === 'free_shipping' && !item.shipping?.free_shipping) return false;
+    if(activeFilters.shipping === 'full' && !item.shipping?.logistic_type?.includes('fulfillment')) return false;
+    return true;
+  });
+  sortResults();
+}
+
+function sortResults(){
+  const s = document.getElementById('sortSelect2')?.value || document.getElementById('sortSelect')?.value || 'relevance';
+  const arr = [...filtered_results];
+  if(s === 'price_asc')     arr.sort((a,b)=>a._price-b._price);
+  if(s === 'price_desc')    arr.sort((a,b)=>b._price-a._price);
+  if(s === 'sold_desc')     arr.sort((a,b)=>b._sold-a._sold);
+  if(s === 'revenue_desc')  arr.sort((a,b)=>b._revenue-a._revenue);
+  renderResults(arr);
+}
+
+// ── RENDER RESULTS ──
+function renderResults(items){
+  if(!items.length){
+    document.getElementById('resultsPanel').innerHTML = '<div style="text-align:center;padding:40px;color:var(--dim);font-size:12px">Nenhum produto com esses filtros.</div>';
+    return;
+  }
+
+  const maxRev = Math.max(...items.map(i=>i._revenue));
+
+  document.getElementById('resultsPanel').innerHTML =
+    `<div class="prod-list">${items.map((item,i) => {
+      const sc = item._score;
+      const scCls = sc>=70?'g':sc>=40?'w':'b';
+      const scColor = sc>=70?'var(--green)':sc>=40?'var(--amber)':'var(--red)';
+      const barW = maxRev>0?(item._revenue/maxRev*100):0;
+      const listBadge = item._listingLabel === 'Premium' ? 'badge-prem' :
+                        item._listingLabel === 'Clássico' ? 'badge-class' : 'badge-free';
+      return `
+        <div class="prod-card${selectedItem===item.id?' active':''}" onclick="selectItem('${item.id}')">
+          <div class="prod-rank ${i<3?'top':''}">${i+1}</div>
+          ${item.thumbnail ? `<img class="prod-img" src="${item.thumbnail.replace('I.jpg','O.jpg')}" loading="lazy" onerror="this.style.display='none'">` : ''}
+          <div class="prod-info">
+            <div class="prod-title">${item.title}</div>
+            <div class="prod-meta">
+              <span class="prod-badge ${listBadge}">${item._listingLabel}</span>
+              ${item.shipping?.free_shipping ? '<span class="prod-badge badge-full">Frete grátis</span>' : ''}
+              ${item.shipping?.logistic_type?.includes('fulfillment') ? '<span class="prod-badge badge-full">Full</span>' : ''}
+            </div>
+            <div class="prod-stats">
+              <span class="prod-price">${fmt(item._price)}</span>
+              <span class="prod-sales">· ${item._sold > 0 ? item._sold.toLocaleString('pt-BR')+'+ vendas' : 'sem dados'}</span>
+              <span class="prod-revenue">${item._revenue>0?'≈ '+fmtK(item._revenue)+'/total':''}</span>
+            </div>
+            <div class="prod-seller">${item.seller?.nickname||'–'}</div>
+            <div class="score-wrap">
+              <div class="score-track"><div class="score-fill" style="background:${scColor};width:${sc}%"></div></div>
+              <span class="score-val" style="color:${scColor}">${sc}</span>
+            </div>
+          </div>
+        </div>`;
+    }).join('')}</div>`;
+}
+
+// ── KPIs ──
+function renderKPIs(){
+  const src = filtered_results;
+  const prices = src.map(i=>i._price).filter(p=>p>0);
+  const avgPrice = prices.length ? prices.reduce((a,b)=>a+b,0)/prices.length : 0;
+  const minPrice = prices.length ? Math.min(...prices) : 0;
+  const maxPrice = prices.length ? Math.max(...prices) : 0;
+  const totalSold = src.reduce((a,i)=>a+i._sold,0);
+  const totalRev  = src.reduce((a,i)=>a+i._revenue,0);
+  const withFG = src.filter(i=>i.shipping?.free_shipping).length;
+
+  txt('kN', src.length.toString()); txt('kNs', 'de '+results.length+' encontrados');
+  txt('kP', fmt(avgPrice)); txt('kPs', `R$${Math.round(minPrice)}–R$${Math.round(maxPrice)}`);
+  txt('kV', totalSold.toLocaleString('pt-BR')+'+ vendas'); txt('kVs','estimativa acumulada');
+  txt('kR', fmtK(totalRev)); txt('kRs','faturamento visível estimado');
+  txt('kFG', Math.round(src.length>0?withFG/src.length*100:0)+'%');
+}
+
+// ── ITEM DETAIL ──
+async function selectItem(id){
+  selectedItem = id;
+  const item = results.find(i=>i.id===id);
+  if(!item) return;
+
+  // Highlight
+  document.querySelectorAll('.prod-card').forEach(c=>{
+    c.classList.toggle('active', c.onclick?.toString().includes(id));
+  });
+
+  const dp = document.getElementById('detailPanel');
+  dp.innerHTML = `<div style="text-align:center;padding:30px;color:var(--dim)"><div class="spin"></div><div style="font-size:11px;margin-top:10px">Carregando detalhes…</div></div>`;
+
+  // Busca detalhes do item
+  let itemDetail = item;
+  try{
+    const cfg2 = JSON.parse(localStorage.getItem('cpf_cfg6')||'{}');
+    const r = await fetch(`${ML_PROXY}/ml-public/items/${id}`, {
+      headers: cfg2.token ? {'x-ml-token': cfg2.token} : {}
+    });
+    const d = await r.json();
+    if(d.id) itemDetail = {...item, ...d};
+  }catch(e){}
+
+  renderDetail(itemDetail);
+}
+
+function renderDetail(item){
+  const price = item._price || parseFloat(item.price)||0;
+  const sold  = item._sold  || parseInt(item.sold_quantity||0);
+  const sc    = item._score || 0;
+  const scCls = sc>=70?'g':sc>=40?'w':'b';
+  const scColor = sc>=70?'var(--green)':sc>=40?'var(--amber)':'var(--red)';
+
+  // Reputação do vendedor
+  const rep = item.seller?.seller_reputation;
+  const repStatus = rep?.power_seller_status;
+  const repColor = repStatus==='platinum'?'var(--blue)':repStatus==='gold'?'var(--amber)':repStatus==='silver'?'var(--sub)':'var(--dim)';
+  const repLabel = repStatus ? repStatus.charAt(0).toUpperCase()+repStatus.slice(1) : 'Sem nível';
+
+  // Calc block defaults
+  const cfg = JSON.parse(localStorage.getItem('cpf_cfg6')||'{}');
+  const commPct = item._listingLabel==='Premium' ? 16 : 14;
+
+  dp = document.getElementById('detailPanel');
+  dp.innerHTML = `
+    <div class="dp-header">
+      <div class="dp-title">${item.title}</div>
+      <div class="dp-meta">
+        <span class="prod-badge ${item._listingLabel==='Premium'?'badge-prem':item._listingLabel==='Clássico'?'badge-class':'badge-free'}">${item._listingLabel||'–'}</span>
+        ${item.shipping?.free_shipping?'<span class="prod-badge badge-full">Frete grátis</span>':''}
+        ${item.shipping?.logistic_type?.includes('fulfillment')?'<span class="prod-badge badge-full">Full</span>':''}
+      </div>
+      <div class="dp-price">${fmt(price)}</div>
+      <a href="${item.permalink}" target="_blank" style="font-size:11px;color:var(--blue);text-decoration:none">🔗 Ver anúncio no ML →</a>
+    </div>
+
+    <!-- SCORE DE OPORTUNIDADE -->
+    <div class="opp-score">
+      <div>
+        <div class="opp-label">Score de oportunidade</div>
+        <div class="opp-sub">${sc>=70?'Alta oportunidade':sc>=40?'Oportunidade moderada':'Mercado dominado'}</div>
+      </div>
+      <div class="opp-val ${scCls}">${sc}</div>
+    </div>
+
+    <!-- MÉTRICAS -->
+    <div class="dp-section">
+      <div class="dp-sec-title">Métricas de mercado</div>
+      <div class="dp-row"><span class="dp-row-lbl">Preço de venda</span><span class="dp-row-val">${fmt(price)}</span></div>
+      <div class="dp-row"><span class="dp-row-lbl">Vendas estimadas</span><span class="dp-row-val" style="color:var(--green)">${sold>0?sold.toLocaleString('pt-BR')+'+ un.':'N/D'}</span></div>
+      <div class="dp-row"><span class="dp-row-lbl">Faturamento estimado</span><span class="dp-row-val" style="color:var(--amber)">${sold>0?fmt(price*sold):'N/D'}</span></div>
+      <div class="dp-row"><span class="dp-row-lbl">Tipo de anúncio</span><span class="dp-row-val">${item._listingLabel||'–'}</span></div>
+      <div class="dp-row"><span class="dp-row-lbl">Comissão ML</span><span class="dp-row-val" style="color:var(--red)">${commPct}%</span></div>
+      <div class="dp-row"><span class="dp-row-lbl">Frete grátis</span><span class="dp-row-val">${item.shipping?.free_shipping?'✅ Sim':'❌ Não'}</span></div>
+      ${item.available_quantity?`<div class="dp-row"><span class="dp-row-lbl">Estoque disponível</span><span class="dp-row-val">${item.available_quantity} un.</span></div>`:''}
+    </div>
+
+    <!-- VENDEDOR -->
+    <div class="dp-section">
+      <div class="dp-sec-title">Vendedor</div>
+      <div class="seller-card">
+        <div class="seller-name">${item.seller?.nickname||'–'}</div>
+        <div class="seller-rep">
+          <div class="rep-dot" style="background:${repColor}"></div>
+          <span style="color:${repColor};font-weight:600">${repLabel}</span>
+          ${rep?.transactions?.total?`<span style="color:var(--dim)">· ${(rep.transactions.total||0).toLocaleString('pt-BR')} transações</span>`:''}
+        </div>
+      </div>
+    </div>
+
+    <!-- CALCULADORA DE VIABILIDADE -->
+    <div class="dp-section">
+      <div class="dp-sec-title">Calculadora de viabilidade</div>
+    </div>
+    <div class="calc-block">
+      <div class="calc-row">
+        <span class="calc-label">Preço de venda</span>
+        <input class="calc-input" id="calcPrice" type="number" value="${price.toFixed(2)}" oninput="calcViab()">
+      </div>
+      <div class="calc-row">
+        <span class="calc-label">Meu custo (CMV)</span>
+        <input class="calc-input" id="calcCMV" type="number" value="${(price*0.40).toFixed(2)}" oninput="calcViab()">
+      </div>
+      <div class="calc-row">
+        <span class="calc-label">Comissão ML (%)</span>
+        <input class="calc-input" id="calcComm" type="number" value="${commPct}" step="0.1" oninput="calcViab()">
+      </div>
+      <div class="calc-row">
+        <span class="calc-label">Frete (R$)</span>
+        <input class="calc-input" id="calcFrete" type="number" value="0" step="0.01" oninput="calcViab()">
+      </div>
+      <div class="calc-row">
+        <span class="calc-label">Imposto (%)</span>
+        <input class="calc-input" id="calcImp" type="number" value="${cfg.imp||6}" step="0.1" oninput="calcViab()">
+      </div>
+      <div class="calc-result" id="calcResult"></div>
+    </div>`;
+
+  calcViab();
+}
+
+function calcViab(){
+  const price = parseFloat(document.getElementById('calcPrice')?.value)||0;
+  const cmv   = parseFloat(document.getElementById('calcCMV')?.value)||0;
+  const comm  = parseFloat(document.getElementById('calcComm')?.value)||0;
+  const frete = parseFloat(document.getElementById('calcFrete')?.value)||0;
+  const imp   = parseFloat(document.getElementById('calcImp')?.value)||0;
+
+  const taxaML  = price*(comm/100);
+  const imposto = price*(imp/100);
+  const totalC  = cmv+taxaML+frete+imposto;
+  const lucro   = price-totalC;
+  const margem  = price>0?(lucro/price*100):0;
+  const mc = margem>=20?'green':margem>=10?'amber':'red';
+
+  const el = document.getElementById('calcResult');
+  if(!el) return;
+  el.innerHTML = `
+    <div class="calc-result-row"><span style="color:var(--sub)">Receita</span><span class="calc-result-val" style="color:var(--blue)">${fmt(price)}</span></div>
+    <div class="calc-result-row"><span style="color:var(--sub)">Tarifa ML (${pct(comm)}%)</span><span class="calc-result-val" style="color:var(--red)">− ${fmt(taxaML)}</span></div>
+    <div class="calc-result-row"><span style="color:var(--sub)">CMV</span><span class="calc-result-val" style="color:var(--red)">− ${fmt(cmv)}</span></div>
+    <div class="calc-result-row"><span style="color:var(--sub)">Frete + Imposto</span><span class="calc-result-val" style="color:var(--red)">− ${fmt(frete+imposto)}</span></div>
+    <div class="calc-lucro">
+      <span>Lucro líquido</span>
+      <span style="color:var(--${mc});font-family:'JetBrains Mono'">${fmt(lucro)} <span style="font-size:12px">(${pct(margem)}%)</span></span>
+    </div>`;
+}
+
+// ── HISTORY ──
+function saveHistory(q){
+  searchHistory = [q, ...searchHistory.filter(h=>h!==q)].slice(0,8);
+  localStorage.setItem('spy_history', JSON.stringify(searchHistory));
+  renderHistory();
+}
+function renderHistory(){
+  if(!searchHistory.length){ document.getElementById('historyBar').style.display='none'; return; }
+  document.getElementById('historyBar').style.display='flex';
+  document.getElementById('histChips').innerHTML = searchHistory.map(h=>
+    `<div class="hist-chip" onclick="setSearch('${h}')">🕐 ${h}</div>`
+  ).join('');
+}
+function setSearch(q){
+  document.getElementById('searchInput').value = q;
+  doSearch();
+}
+
+// ── UTILS ──
+function fmt(n){return'R$ '+(n||0).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});}
+function fmtK(n){
+  if(Math.abs(n)>=1e6) return 'R$'+(n/1e6).toFixed(1)+'M';
+  if(Math.abs(n)>=1000) return 'R$'+(n/1000).toFixed(0)+'k';
+  return 'R$'+(n||0).toFixed(0);
+}
+function pct(n){return(n||0).toFixed(1);}
+function txt(id,v){const e=document.getElementById(id);if(e)e.textContent=v;}
+
+// ── INIT ──
+renderHistory();
+(function checkToken(){
+  const cfg = JSON.parse(localStorage.getItem('cpf_cfg6')||'{}');
+  const el = document.getElementById('tokenStatus');
+  if(cfg.token){
+    el.innerHTML = '✅ Token ML configurado — buscas autenticadas';
+    el.style.color = 'var(--green)';
+  } else {
+    el.innerHTML = '⚠️ Token ML não configurado — acesse o Lucro Real e sincronize primeiro para habilitar as buscas';
+    el.style.color = 'var(--amber)';
+  }
+})();
+</script>
+</body>
+</html>
