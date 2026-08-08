@@ -11,7 +11,7 @@ const CLIENT_ID = '5798831532059966';
 const CLIENT_SECRET = 'qt5i8KjEWCMMECtWDspShpDktS9dWCeN';
 
 app.get('/', (req, res) => {
-  res.json({ status: 'CPF Hub API online', version: '4.0' });
+  res.json({ status: 'CPF Hub API online', version: '5.0' });
 });
 
 // Proxy GET genérico
@@ -29,7 +29,7 @@ app.get('/ml/*', async (req, res) => {
   }
 });
 
-// Busca pedidos com dados financeiros reais e precisos
+// Busca pedidos com dados financeiros reais e rateio de frete por pacote
 app.get('/orders-full', async (req, res) => {
   const token = req.headers['x-ml-token'];
   if (!token) return res.status(401).json({ error: 'Token não informado' });
@@ -46,72 +46,101 @@ app.get('/orders-full', async (req, res) => {
     const orders = listResp.data.results || [];
     const paging = listResp.data.paging || {};
 
-    // 2. Detalhes financeiros reais em lotes de 10 (evita rate limit do ML)
-    const BATCH = 10;
-    const detailed = [];
-    for(let i = 0; i < orders.length; i += BATCH){
-      const batch = orders.slice(i, i + BATCH);
-      const results = await Promise.all(batch.map(async (order) => {
+    // 2. Agrupa orders por pack_id para rateio correto de frete
+    const packMap = {}; // pack_id -> [orders]
+    const soloOrders = []; // orders sem pack
+
+    orders.forEach(order => {
+      if (order.pack_id) {
+        if (!packMap[order.pack_id]) packMap[order.pack_id] = [];
+        packMap[order.pack_id].push(order);
+      } else {
+        soloOrders.push(order);
+      }
+    });
+
+    // 3. Busca frete real de cada pack (uma única chamada por pack)
+    const packFreteMap = {}; // pack_id -> shipping_cost real
+    await Promise.all(Object.keys(packMap).map(async packId => {
       try {
-        const salePrice = parseFloat(order.total_amount) || 0;
+        // Pega o shipping_id de uma das orders do pack
+        const anyOrder = packMap[packId][0];
+        const shippingId = anyOrder.shipping?.id;
+        if (!shippingId) { packFreteMap[packId] = 0; return; }
 
-        // ── COMISSÃO REAL ──
-        // sale_fee vem por UNIDADE no order_items
-        // deve ser multiplicado pela quantidade de cada item
-        const items = order.order_items || [];
-        let mlFee = 0;
-        items.forEach(item => {
-          const feePerUnit = Math.abs(parseFloat(item.sale_fee || 0));
-          const qty = parseInt(item.quantity || 1);
-          mlFee += feePerUnit * qty;
-        });
+        const shipCosts = await axios.get(
+          `${ML_BASE}/shipments/${shippingId}/costs`,
+          { headers: { Authorization: `Bearer ${token}` } }
+        ).then(r => r.data).catch(() => null);
 
-        // ── FRETE REAL ──
-        // Endpoint correto: /shipments/{id}/costs → senders[0].cost
-        // É o valor final que o seller paga, já com descontos do ML aplicados
-        let shippingCost = 0;
-        const shippingId = order.shipping?.id;
-        if (shippingId) {
-          const shipCosts = await axios.get(
-            `${ML_BASE}/shipments/${shippingId}/costs`,
-            { headers: { Authorization: `Bearer ${token}` } }
-          ).then(r => r.data).catch(() => null);
-
-          if (shipCosts?.senders?.length > 0) {
-            // senders[0].cost = custo final do seller após descontos
-            shippingCost = Math.abs(parseFloat(shipCosts.senders[0].cost || 0));
-          }
-        }
-
-        const netReceived = salePrice - mlFee - shippingCost;
-
-        return {
-          ...order,
-          _financial: {
-            sale_price:    salePrice,
-            ml_fee:        mlFee,
-            shipping_cost: shippingCost,
-            net_received:  netReceived,
-          }
-        };
-
-      } catch (e) {
-        const salePrice = parseFloat(order.total_amount) || 0;
-        return {
-          ...order,
-          _financial: {
-            sale_price:    salePrice,
-            ml_fee:        0,
-            shipping_cost: 0,
-            net_received:  salePrice,
-          }
-        };
+        // senders[0].cost = custo final do seller após descontos do ML
+        const cost = shipCosts?.senders?.[0]?.cost || 0;
+        packFreteMap[packId] = Math.abs(parseFloat(cost));
+      } catch(e) {
+        packFreteMap[packId] = 0;
       }
     }));
-      detailed.push(...results);
-      // Pausa de 300ms entre lotes para respeitar rate limit do ML
-      if(i + BATCH < orders.length) await new Promise(r => setTimeout(r, 300));
+
+    // 4. Para cada pack, rateia o frete proporcional ao valor de cada item
+    const processOrder = (order, freteRateado) => {
+      const salePrice = parseFloat(order.total_amount) || 0;
+
+      // Comissão real: sale_fee × quantidade por item
+      let mlFee = 0;
+      const items = order.order_items || [];
+      items.forEach(item => {
+        const feePerUnit = Math.abs(parseFloat(item.sale_fee || 0));
+        const qty = parseInt(item.quantity || 1);
+        mlFee += feePerUnit * qty;
+      });
+
+      const shippingCost = freteRateado;
+      const netReceived = salePrice - mlFee - shippingCost;
+
+      return {
+        ...order,
+        _financial: {
+          sale_price:    salePrice,
+          ml_fee:        mlFee,
+          shipping_cost: shippingCost,
+          net_received:  netReceived,
+          is_pack:       !!order.pack_id,
+          pack_id:       order.pack_id || null,
+        }
+      };
+    };
+
+    const detailed = [];
+
+    // Orders de pacote — rateia frete pelo peso do valor de cada order no pack
+    for (const packId of Object.keys(packMap)) {
+      const packOrders = packMap[packId];
+      const totalFretepack = packFreteMap[packId] || 0;
+      const totalValorPack = packOrders.reduce((a, o) => a + (parseFloat(o.total_amount) || 0), 0);
+
+      packOrders.forEach(order => {
+        const salePrice = parseFloat(order.total_amount) || 0;
+        // Frete rateado proporcionalmente ao valor do item no pack
+        const freteRateado = totalValorPack > 0
+          ? totalFretepack * (salePrice / totalValorPack)
+          : 0;
+        detailed.push(processOrder(order, freteRateado));
+      });
     }
+
+    // Orders solo — frete integral
+    await Promise.all(soloOrders.map(async order => {
+      const shippingId = order.shipping?.id;
+      let frete = 0;
+      if (shippingId) {
+        const shipCosts = await axios.get(
+          `${ML_BASE}/shipments/${shippingId}/costs`,
+          { headers: { Authorization: `Bearer ${token}` } }
+        ).then(r => r.data).catch(() => null);
+        frete = Math.abs(parseFloat(shipCosts?.senders?.[0]?.cost || 0));
+      }
+      detailed.push(processOrder(order, frete));
+    }));
 
     res.json({ results: detailed, paging });
 
@@ -142,4 +171,4 @@ app.post('/ml/oauth/refresh', async (req, res) => {
 });
 
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log(`CPF Hub v4.0 rodando na porta ${PORT}`));
+app.listen(PORT, () => console.log(`CPF Hub v5.0 rodando na porta ${PORT}`));
