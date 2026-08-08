@@ -3,15 +3,19 @@ const axios = require('axios');
 const cors = require('cors');
 
 const app = express();
+const path = require('path');
 app.use(cors());
 app.use(express.json());
+
+// Serve static HTML files from /public folder
+app.use(express.static(path.join(__dirname, 'public')));
 
 const ML_BASE = 'https://api.mercadolibre.com';
 const CLIENT_ID = '5798831532059966';
 const CLIENT_SECRET = 'qt5i8KjEWCMMECtWDspShpDktS9dWCeN';
 
 app.get('/', (req, res) => {
-  res.json({ status: 'CPF Hub API online', version: '9.0' });
+  res.json({ status: 'CPF Hub API online', version: '10.0' });
 });
 
 // Proxy GET genérico
@@ -243,4 +247,4 @@ app.post('/ml/oauth/refresh', async (req, res) => {
 });
 
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log(`CPF Hub v9.0 rodando na porta ${PORT}`));
+app.listen(PORT, () => console.log(`CPF Hub v10.0 rodando na porta ${PORT}`));
