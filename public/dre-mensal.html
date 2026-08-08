@@ -1,0 +1,653 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CPF Hub · DRE Mensal</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap');
+:root{
+  --bg:#0D0F14;--s1:#13161D;--s2:#181C25;--s3:#1E2330;
+  --b1:rgba(255,255,255,.06);--b2:rgba(255,255,255,.11);
+  --text:#F1F3F8;--sub:#8B93A7;--dim:#4A5268;
+  --green:#22C55E;--gbg:rgba(34,197,94,.1);--gborder:rgba(34,197,94,.2);
+  --red:#F43F5E;--rbg:rgba(244,63,94,.1);
+  --amber:#F59E0B;--abg:rgba(245,158,11,.1);
+  --blue:#3B82F6;--bbg:rgba(59,130,246,.1);
+  --purple:#A855F7;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);font-size:13px;min-height:100vh}
+
+/* TOPBAR */
+.topbar{height:50px;background:var(--s1);border-bottom:1px solid var(--b1);display:flex;align-items:center;gap:12px;padding:0 20px;position:sticky;top:0;z-index:50}
+.tb-back{display:flex;align-items:center;gap:6px;color:var(--sub);font-size:12px;cursor:pointer;padding:5px 10px;border-radius:6px;border:1px solid var(--b1);background:var(--s2);transition:all .12s}
+.tb-back:hover{color:var(--text);border-color:var(--b2)}
+.tb-title{font-size:13px;font-weight:700}
+.tb-sub{font-size:11px;color:var(--dim)}
+.tb-space{flex:1}
+.btn{display:inline-flex;align-items:center;gap:5px;padding:6px 13px;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer;border:none;font-family:inherit;transition:all .15s;white-space:nowrap}
+.btn-ghost{background:var(--s3);color:var(--sub);border:1px solid var(--b2)}
+.btn-ghost:hover{color:var(--text)}
+.btn-green{background:var(--green);color:#000}
+.btn-green:hover{filter:brightness(1.08)}
+.btn-sm{padding:5px 10px;font-size:11px}
+
+/* PERIOD SELECTOR */
+.period-bar{background:var(--s1);border-bottom:1px solid var(--b1);padding:10px 20px;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.period-label{font-size:11px;color:var(--dim);font-weight:600;text-transform:uppercase;letter-spacing:.5px}
+.period-chips{display:flex;gap:5px;flex-wrap:wrap}
+.pchip{padding:4px 10px;border-radius:14px;font-size:11px;font-weight:600;border:1px solid var(--b1);color:var(--dim);cursor:pointer;transition:all .12s;white-space:nowrap}
+.pchip:hover{border-color:var(--b2);color:var(--sub)}
+.pchip.active{border-color:var(--green);color:var(--green);background:var(--gbg)}
+.custom-range{display:flex;gap:6px;align-items:center;margin-left:auto}
+.date-input{padding:5px 9px;background:var(--s2);border:1px solid var(--b1);border-radius:6px;color:var(--text);font-family:inherit;font-size:11px;outline:none}
+.date-input:focus{border-color:var(--green)}
+
+/* MAIN LAYOUT */
+.content{padding:20px;max-width:1200px;margin:0 auto}
+
+/* WATERFALL KPIs */
+.kpi-waterfall{display:flex;gap:0;margin-bottom:20px;background:var(--s1);border:1px solid var(--b1);border-radius:10px;overflow:hidden}
+.kw-item{flex:1;padding:14px 16px;border-right:1px solid var(--b1);position:relative}
+.kw-item:last-child{border-right:none}
+.kw-label{font-size:10px;font-weight:700;letter-spacing:.5px;color:var(--dim);text-transform:uppercase;margin-bottom:4px}
+.kw-val{font-size:18px;font-weight:700;letter-spacing:-.5px;font-variant-numeric:tabular-nums;font-family:'JetBrains Mono',monospace}
+.kw-val.blue{color:var(--blue)}
+.kw-val.amber{color:var(--amber)}
+.kw-val.red{color:var(--red)}
+.kw-val.green{color:var(--green)}
+.kw-val.purple{color:var(--purple)}
+.kw-sub{font-size:10px;color:var(--dim);margin-top:3px}
+.kw-arrow{position:absolute;right:-10px;top:50%;transform:translateY(-50%);color:var(--dim);font-size:16px;z-index:2}
+
+/* GRID */
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px}
+.grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;margin-bottom:16px}
+
+/* CARDS */
+.card{background:var(--s1);border:1px solid var(--b1);border-radius:10px;overflow:hidden}
+.card-head{display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border-bottom:1px solid var(--b1)}
+.card-title{font-size:12px;font-weight:700;letter-spacing:.3px}
+.card-badge{font-size:10px;font-weight:600;padding:2px 8px;border-radius:10px}
+.card-body{padding:16px}
+
+/* DRE TABLE */
+.dre-table{width:100%;border-collapse:collapse}
+.dre-row{display:flex;align-items:center;padding:8px 16px;border-bottom:1px solid var(--b1)}
+.dre-row:last-child{border-bottom:none}
+.dre-row.section{background:var(--s2);padding:6px 16px}
+.dre-row.total{background:var(--s3);padding:10px 16px;border-top:2px solid var(--b2)}
+.dre-row.subtotal{background:rgba(59,130,246,.04);padding:9px 16px;border-top:1px solid var(--b2)}
+.dre-label{flex:1;font-size:12px}
+.dre-label.section-lbl{font-size:10px;font-weight:700;letter-spacing:.8px;color:var(--dim);text-transform:uppercase}
+.dre-label.indent{padding-left:14px;color:var(--sub)}
+.dre-label.total-lbl{font-weight:700;font-size:13px}
+.dre-val{font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:600;font-variant-numeric:tabular-nums;min-width:110px;text-align:right}
+.dre-pct{font-size:10px;color:var(--dim);min-width:45px;text-align:right;font-variant-numeric:tabular-nums;font-family:'JetBrains Mono'}
+.dre-val.pos{color:var(--green)}
+.dre-val.neg{color:var(--red)}
+.dre-val.amber{color:var(--amber)}
+.dre-val.blue{color:var(--blue)}
+.dre-val.purple{color:var(--purple)}
+.dre-val.total-val{font-size:15px}
+
+/* BAR CHART */
+.bar-chart{padding:0 16px 16px}
+.bar-item{margin-bottom:10px}
+.bar-top{display:flex;justify-content:space-between;margin-bottom:3px}
+.bar-name{font-size:11px;color:var(--sub)}
+.bar-val{font-size:11px;font-family:'JetBrains Mono';color:var(--text);font-variant-numeric:tabular-nums}
+.bar-track{height:5px;background:var(--s3);border-radius:3px;overflow:hidden}
+.bar-fill{height:100%;border-radius:3px;transition:width .5s}
+
+/* MONTHLY EVOLUTION */
+.month-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(85px,1fr));gap:6px;padding:16px}
+.month-card{background:var(--s2);border:1px solid var(--b1);border-radius:7px;padding:10px 10px 8px;cursor:pointer;transition:all .15s}
+.month-card:hover,.month-card.active{border-color:var(--green);background:var(--gbg)}
+.month-name{font-size:10px;font-weight:700;color:var(--sub);text-transform:uppercase;letter-spacing:.5px;margin-bottom:5px}
+.month-rev{font-size:12px;font-weight:700;font-variant-numeric:tabular-nums;font-family:'JetBrains Mono';color:var(--text);margin-bottom:2px}
+.month-margin{font-size:10px;font-weight:700;font-variant-numeric:tabular-nums;font-family:'JetBrains Mono'}
+.month-margin.g{color:var(--green)}
+.month-margin.w{color:var(--amber)}
+.month-margin.b{color:var(--red)}
+.month-bar{height:3px;border-radius:2px;margin-top:5px;transition:width .4s}
+
+/* CHART CANVAS */
+.chart-wrap{padding:16px;position:relative;height:220px}
+
+/* SPINNER */
+.spinner{display:flex;align-items:center;justify-content:center;padding:40px;flex-direction:column;gap:10px;color:var(--dim);font-size:12px}
+.spin{width:20px;height:20px;border:2px solid var(--b2);border-top-color:var(--green);border-radius:50%;animation:spin .65s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* EMPTY */
+.empty{text-align:center;padding:40px;color:var(--dim)}
+.empty-ico{font-size:32px;margin-bottom:8px}
+.empty-title{font-size:13px;font-weight:600;color:var(--sub);margin-bottom:4px}
+.empty-desc{font-size:11px;line-height:1.6}
+
+/* EXPORT */
+.export-bar{display:flex;gap:8px;justify-content:flex-end;margin-bottom:14px}
+
+/* INSIGHTS */
+.insights{display:flex;flex-direction:column;gap:8px;padding:16px}
+.insight{display:flex;gap:10px;align-items:flex-start;padding:10px 12px;background:var(--s2);border-radius:7px;border:1px solid var(--b1)}
+.insight-ico{font-size:16px;flex-shrink:0;margin-top:1px}
+.insight-title{font-size:11px;font-weight:700;margin-bottom:2px}
+.insight-desc{font-size:11px;color:var(--sub);line-height:1.5}
+.insight.good{border-color:var(--gborder);background:var(--gbg)}
+.insight.good .insight-title{color:var(--green)}
+.insight.warn{border-color:rgba(245,158,11,.2);background:var(--abg)}
+.insight.warn .insight-title{color:var(--amber)}
+.insight.bad{border-color:rgba(244,63,94,.2);background:var(--rbg)}
+.insight.bad .insight-title{color:var(--red)}
+
+@media(max-width:700px){.grid2,.grid3{grid-template-columns:1fr}.kpi-waterfall{flex-wrap:wrap}.kw-item{min-width:45%;border-bottom:1px solid var(--b1)}}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="tb-back" onclick="history.back()">← Voltar</div>
+  <div>
+    <div class="tb-title">CPF Hub · DRE Mensal</div>
+    <div class="tb-sub" id="tbSub">Demonstrativo de Resultado</div>
+  </div>
+  <div class="tb-space"></div>
+  <button class="btn btn-ghost btn-sm" onclick="exportDRE()">⬇ Exportar CSV</button>
+  <button class="btn btn-green btn-sm" onclick="loadFromCache()">↻ Carregar dados</button>
+</div>
+
+<!-- PERIOD SELECTOR -->
+<div class="period-bar">
+  <span class="period-label">Período</span>
+  <div class="period-chips">
+    <div class="pchip" data-p="1m" onclick="setPeriod('1m',this)">Últ. 30 dias</div>
+    <div class="pchip active" data-p="3m" onclick="setPeriod('3m',this)">Últ. 3 meses</div>
+    <div class="pchip" data-p="6m" onclick="setPeriod('6m',this)">Últ. 6 meses</div>
+    <div class="pchip" data-p="12m" onclick="setPeriod('12m',this)">Últ. 12 meses</div>
+    <div class="pchip" data-p="all" onclick="setPeriod('all',this)">Todo período</div>
+  </div>
+  <div class="custom-range">
+    <span style="font-size:11px;color:var(--dim)">De</span>
+    <input type="date" class="date-input" id="dateFrom">
+    <span style="font-size:11px;color:var(--dim)">até</span>
+    <input type="date" class="date-input" id="dateTo">
+    <button class="btn btn-ghost btn-sm" onclick="applyCustom()">Aplicar</button>
+  </div>
+</div>
+
+<div class="content">
+
+  <!-- WATERFALL KPIs -->
+  <div class="kpi-waterfall">
+    <div class="kw-item">
+      <div class="kw-label">Receita bruta</div>
+      <div class="kw-val blue" id="kwR">R$ –</div>
+      <div class="kw-sub" id="kwRs">– vendas</div>
+    </div>
+    <div class="kw-item">
+      <div class="kw-label">Taxas ML</div>
+      <div class="kw-val amber" id="kwT">– R$ –</div>
+      <div class="kw-sub" id="kwTs">–% receita</div>
+    </div>
+    <div class="kw-item">
+      <div class="kw-label">Frete ML</div>
+      <div class="kw-val amber" id="kwF">– R$ –</div>
+      <div class="kw-sub" id="kwFs">–% receita</div>
+    </div>
+    <div class="kw-item">
+      <div class="kw-label">= Recebido ML</div>
+      <div class="kw-val blue" id="kwNet">R$ –</div>
+      <div class="kw-sub" id="kwNets">líquido plataforma</div>
+    </div>
+    <div class="kw-item">
+      <div class="kw-label">CMV</div>
+      <div class="kw-val amber" id="kwCMV">– R$ –</div>
+      <div class="kw-sub" id="kwCMVs">–% receita</div>
+    </div>
+    <div class="kw-item">
+      <div class="kw-label">Imposto</div>
+      <div class="kw-val purple" id="kwImp">– R$ –</div>
+      <div class="kw-sub" id="kwImps">–%</div>
+    </div>
+    <div class="kw-item">
+      <div class="kw-label">Lucro líquido</div>
+      <div class="kw-val green" id="kwL">R$ –</div>
+      <div class="kw-sub" id="kwLs">margem –%</div>
+    </div>
+  </div>
+
+  <div class="grid2">
+
+    <!-- DRE COMPLETO -->
+    <div class="card">
+      <div class="card-head">
+        <div class="card-title">DRE · Demonstrativo de Resultado</div>
+        <div class="card-badge" id="drePeriodBadge" style="background:var(--bbg);color:var(--blue)">–</div>
+      </div>
+      <div id="dreBody">
+        <div class="empty">
+          <div class="empty-ico">📋</div>
+          <div class="empty-title">Nenhum dado</div>
+          <div class="empty-desc">Carregue os dados do Lucro Real primeiro</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- INSIGHTS -->
+    <div style="display:flex;flex-direction:column;gap:16px">
+      <!-- EVOLUÇÃO MENSAL -->
+      <div class="card">
+        <div class="card-head">
+          <div class="card-title">Evolução mensal</div>
+          <div class="card-badge" style="background:var(--gbg);color:var(--green)" id="monthCount">– meses</div>
+        </div>
+        <div id="monthGrid" class="month-grid">
+          <div class="empty"><div class="empty-desc">Sem dados</div></div>
+        </div>
+      </div>
+
+      <!-- INSIGHTS AUTOMÁTICOS -->
+      <div class="card">
+        <div class="card-head"><div class="card-title">Insights automáticos</div></div>
+        <div id="insightsBody" class="insights">
+          <div class="empty"><div class="empty-desc">Análise disponível após carregar dados</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- CUSTOS BREAKDOWN + EVOLUÇÃO -->
+  <div class="grid2">
+
+    <!-- BREAKDOWN DE CUSTOS -->
+    <div class="card">
+      <div class="card-head"><div class="card-title">Composição dos custos</div></div>
+      <div id="custosBar" class="bar-chart">
+        <div class="empty"><div class="empty-desc">Sem dados</div></div>
+      </div>
+    </div>
+
+    <!-- GRÁFICO RECEITA VS LUCRO -->
+    <div class="card">
+      <div class="card-head"><div class="card-title">Receita vs lucro mensal</div></div>
+      <div class="chart-wrap">
+        <canvas id="chartRL" role="img" aria-label="Gráfico de receita vs lucro por mês"></canvas>
+      </div>
+    </div>
+
+  </div>
+
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<script>
+let allSales = [];
+let filtered = [];
+let activePeriod = '3m';
+let chartRL = null;
+
+// ── PERIOD ──
+function setPeriod(p, el){
+  activePeriod = p;
+  document.querySelectorAll('.pchip').forEach(x=>x.classList.toggle('active', x.dataset.p===p));
+  applyPeriod();
+}
+
+function applyPeriod(){
+  const now = new Date();
+  let from = null;
+  if(activePeriod === '1m')  from = new Date(now - 30*864e5);
+  if(activePeriod === '3m')  from = new Date(now - 90*864e5);
+  if(activePeriod === '6m')  from = new Date(now - 180*864e5);
+  if(activePeriod === '12m') from = new Date(now - 365*864e5);
+
+  if(activePeriod === 'custom'){
+    const f = document.getElementById('dateFrom').value;
+    const t = document.getElementById('dateTo').value;
+    filtered = allSales.filter(s => {
+      if(f && s.date < f) return false;
+      if(t && s.date > t) return false;
+      return true;
+    });
+  } else {
+    filtered = from
+      ? allSales.filter(s => new Date(s.date) >= from)
+      : [...allSales];
+  }
+  render();
+}
+
+function applyCustom(){
+  activePeriod = 'custom';
+  document.querySelectorAll('.pchip').forEach(x=>x.classList.remove('active'));
+  applyPeriod();
+}
+
+// ── LOAD DATA ──
+function loadFromCache(){
+  const raw = localStorage.getItem('cpf_ml_cache6');
+  if(!raw){ alert('Nenhum dado encontrado. Acesse o módulo de Lucro Real e sincronize primeiro.'); return; }
+  try{
+    const orders = JSON.parse(raw);
+    processSales(orders);
+  }catch(e){ alert('Erro ao carregar dados: '+e.message); }
+}
+
+function processSales(orders){
+  const cfg = JSON.parse(localStorage.getItem('cpf_cfg6')||'{}');
+  const imp = cfg.imp||6;
+  const cmvPct = cfg.cmvPct||45;
+  const op = cfg.op||2.5;
+  const skuCosts = JSON.parse(localStorage.getItem('cpf_skucosts6')||'{}');
+
+  allSales = orders.map(o=>{
+    if(!o.id) return null;
+    const fin = o._financial||{};
+    const receita = fin.sale_price||parseFloat(o.total_amount)||0;
+    if(receita<=0) return null;
+    const mlFee = fin.ml_fee||0;
+    const freteMl = fin.shipping_cost||0;
+    const netReceived = fin.net_received||(receita-mlFee-freteMl);
+    const items = o.order_items||[];
+    const sku = (items[0]?.item?.seller_sku||items[0]?.item?.seller_custom_field||'').trim();
+    const qty = items.reduce((a,i)=>a+(i.quantity||1),0)||1;
+    const unitCost = skuCosts['ORDER_'+o.id] || (sku?skuCosts[sku.toUpperCase()]:null);
+    const cmv = unitCost ? unitCost*qty : receita*(cmvPct/100);
+    const imposto = receita*(imp/100);
+    const lucro = netReceived - cmv - imposto - op;
+    const margem = receita>0?(lucro/receita)*100:0;
+    return { id:o.id, date:(o.date_created||'').split('T')[0], receita, mlFee, freteMl, netReceived, cmv, imposto, op, lucro, margem, sku };
+  }).filter(Boolean);
+
+  applyPeriod();
+}
+
+// ── RENDER ──
+function render(){
+  if(!filtered.length){
+    renderEmpty();
+    return;
+  }
+
+  const tot = agg(filtered);
+  renderKPIs(tot);
+  renderDRE(tot);
+  renderMonths();
+  renderCustosBar(tot);
+  renderChart();
+  renderInsights(tot);
+
+  document.getElementById('tbSub').textContent = `${filtered.length} vendas · ${fmt(tot.receita)} em receita`;
+}
+
+function agg(sales){
+  return {
+    receita:    sales.reduce((a,s)=>a+s.receita,0),
+    mlFee:      sales.reduce((a,s)=>a+s.mlFee,0),
+    freteMl:    sales.reduce((a,s)=>a+s.freteMl,0),
+    netReceived:sales.reduce((a,s)=>a+s.netReceived,0),
+    cmv:        sales.reduce((a,s)=>a+s.cmv,0),
+    imposto:    sales.reduce((a,s)=>a+s.imposto,0),
+    op:         sales.reduce((a,s)=>a+s.op,0),
+    lucro:      sales.reduce((a,s)=>a+s.lucro,0),
+    n:          sales.length,
+    margem:     sales.length>0?sales.reduce((a,s)=>a+s.lucro,0)/sales.reduce((a,s)=>a+s.receita,0)*100:0
+  };
+}
+
+function renderKPIs(t){
+  txt('kwR', fmt(t.receita)); txt('kwRs', t.n+' vendas');
+  txt('kwT', '− '+fmt(t.mlFee)); txt('kwTs', pct(t.receita>0?t.mlFee/t.receita*100:0)+'% receita');
+  txt('kwF', '− '+fmt(t.freteMl)); txt('kwFs', pct(t.receita>0?t.freteMl/t.receita*100:0)+'% receita');
+  txt('kwNet', fmt(t.netReceived)); txt('kwNets', 'líquido plataforma');
+  txt('kwCMV', '− '+fmt(t.cmv)); txt('kwCMVs', pct(t.receita>0?t.cmv/t.receita*100:0)+'% receita');
+  txt('kwImp', '− '+fmt(t.imposto)); txt('kwImps', pct(t.receita>0?t.imposto/t.receita*100:0)+'%');
+  const kl = document.getElementById('kwL');
+  kl.textContent = fmt(t.lucro);
+  kl.className = 'kw-val '+(t.lucro>=0?'green':'red');
+  txt('kwLs', 'margem '+pct(t.margem)+'%');
+}
+
+function renderDRE(t){
+  const r = t.receita;
+  const p = v => r>0?pct(v/r*100)+'%':'–';
+  const row = (label, val, cls, indent, pctVal) =>
+    `<div class="dre-row">
+      <div class="dre-label${indent?' indent':''}">
+        ${label}
+      </div>
+      <div class="dre-pct">${pctVal!==undefined?pctVal:''}</div>
+      <div class="dre-val ${cls}">${val}</div>
+    </div>`;
+  const sec = label => `<div class="dre-row section"><div class="dre-label section-lbl">${label}</div></div>`;
+  const sub = (label, val, cls) =>
+    `<div class="dre-row subtotal">
+      <div class="dre-label total-lbl">${label}</div>
+      <div class="dre-pct"></div>
+      <div class="dre-val total-val ${cls}">${val}</div>
+    </div>`;
+  const tot = (label, val, cls) =>
+    `<div class="dre-row total">
+      <div class="dre-label total-lbl" style="font-size:14px">${label}</div>
+      <div class="dre-pct"></div>
+      <div class="dre-val total-val ${cls}" style="font-size:16px">${val}</div>
+    </div>`;
+
+  // Date range badge
+  const dates = filtered.map(s=>s.date).sort();
+  const d1 = fmtDate(dates[0]), d2 = fmtDate(dates[dates.length-1]);
+  document.getElementById('drePeriodBadge').textContent = d1+' → '+d2;
+
+  document.getElementById('dreBody').innerHTML =
+    sec('receita')
+    + row('Receita bruta de vendas', fmt(r), 'blue', false, '100%')
+    + sec('deduções da plataforma')
+    + row('Comissão / tarifa ML', '− '+fmt(t.mlFee), 'neg', true, p(t.mlFee))
+    + row('Frete ML (custo seller)', '− '+fmt(t.freteMl), 'neg', true, p(t.freteMl))
+    + sub('= Receita líquida ML', fmt(t.netReceived), 'blue')
+    + sec('custos do produto')
+    + row('Custo da mercadoria (CMV)', '− '+fmt(t.cmv), 'neg', true, p(t.cmv))
+    + sub('= Lucro bruto', fmt(t.netReceived-t.cmv), (t.netReceived-t.cmv)>=0?'green':'red')
+    + sec('despesas operacionais')
+    + row('Simples Nacional / Imposto', '− '+fmt(t.imposto), 'neg', true, p(t.imposto))
+    + row('Custo operacional fixo', '− '+fmt(t.op), 'neg', true, p(t.op))
+    + tot('Lucro líquido', fmt(t.lucro), t.lucro>=0?'pos':'neg');
+}
+
+function renderMonths(){
+  // Agrupa por mês
+  const monthMap = {};
+  filtered.forEach(s=>{
+    const m = s.date.slice(0,7); // YYYY-MM
+    if(!monthMap[m]) monthMap[m]={receita:0,lucro:0,n:0};
+    monthMap[m].receita += s.receita;
+    monthMap[m].lucro   += s.lucro;
+    monthMap[m].n       += 1;
+  });
+
+  const months = Object.keys(monthMap).sort();
+  document.getElementById('monthCount').textContent = months.length+' meses';
+
+  const maxRec = Math.max(...months.map(m=>monthMap[m].receita));
+
+  document.getElementById('monthGrid').innerHTML = months.map(m=>{
+    const d = monthMap[m];
+    const marg = d.receita>0?(d.lucro/d.receita*100):0;
+    const mc = marg>15?'g':marg>=5?'w':'b';
+    const barW = maxRec>0?(d.receita/maxRec*100):0;
+    const [y,mo] = m.split('-');
+    const mName = new Date(y,mo-1,1).toLocaleString('pt-BR',{month:'short'}).replace('.','').toUpperCase()+'/'+y.slice(2);
+    return `<div class="month-card" onclick="filterMonth('${m}')">
+      <div class="month-name">${mName}</div>
+      <div class="month-rev">${fmtK(d.receita)}</div>
+      <div class="month-margin ${mc}">${pct(marg)}%</div>
+      <div class="month-bar" style="background:${mc==='g'?'var(--green)':mc==='w'?'var(--amber)':'var(--red)'};width:${barW}%"></div>
+    </div>`;
+  }).join('');
+}
+
+function renderCustosBar(t){
+  const items = [
+    {name:'Custo mercadoria (CMV)', val:t.cmv, color:'#6366F1'},
+    {name:'Comissão ML',            val:t.mlFee, color:'#F59E0B'},
+    {name:'Frete ML',               val:t.freteMl, color:'#3B82F6'},
+    {name:'Imposto (Simples)',       val:t.imposto, color:'#A855F7'},
+    {name:'Custo operacional',       val:t.op, color:'#4A5268'},
+    {name:'Lucro líquido',           val:Math.max(0,t.lucro), color:t.lucro>=0?'#22C55E':'#F43F5E'},
+  ];
+  const total = items.reduce((a,i)=>a+i.val,0);
+  document.getElementById('custosBar').innerHTML = items.map(i=>{
+    const w = total>0?(i.val/total*100):0;
+    return `<div class="bar-item">
+      <div class="bar-top">
+        <span class="bar-name">${i.name}</span>
+        <span class="bar-val">${fmt(i.val)} <span style="color:var(--dim);font-size:10px">${pct(w)}%</span></span>
+      </div>
+      <div class="bar-track"><div class="bar-fill" style="background:${i.color};width:${w}%"></div></div>
+    </div>`;
+  }).join('');
+}
+
+function renderChart(){
+  const monthMap = {};
+  filtered.forEach(s=>{
+    const m = s.date.slice(0,7);
+    if(!monthMap[m]) monthMap[m]={receita:0,lucro:0};
+    monthMap[m].receita += s.receita;
+    monthMap[m].lucro   += s.lucro;
+  });
+  const months = Object.keys(monthMap).sort();
+  const labels = months.map(m=>{
+    const [y,mo]=m.split('-');
+    return new Date(y,mo-1,1).toLocaleString('pt-BR',{month:'short'}).replace('.','').toUpperCase()+'/'+y.slice(2);
+  });
+  const recData = months.map(m=>monthMap[m].receita);
+  const lucData = months.map(m=>monthMap[m].lucro);
+
+  if(chartRL) chartRL.destroy();
+  chartRL = new Chart(document.getElementById('chartRL'),{
+    type:'bar',
+    data:{
+      labels,
+      datasets:[
+        {label:'Receita',data:recData,backgroundColor:'rgba(59,130,246,.5)',borderColor:'#3B82F6',borderWidth:1.5,borderRadius:3},
+        {label:'Lucro',data:lucData,backgroundColor:lucData.map(v=>v>=0?'rgba(34,197,94,.6)':'rgba(244,63,94,.6)'),borderColor:lucData.map(v=>v>=0?'#22C55E':'#F43F5E'),borderWidth:1.5,borderRadius:3},
+      ]
+    },
+    options:{
+      responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:false}},
+      scales:{
+        x:{ticks:{color:'#4A5268',font:{size:10},maxRotation:45,autoSkip:false},grid:{display:false},border:{display:false}},
+        y:{ticks:{color:'#4A5268',font:{size:10},callback:v=>'R$'+fmtK(v)},grid:{color:'rgba(255,255,255,.04)'},border:{display:false}}
+      }
+    }
+  });
+}
+
+function renderInsights(t){
+  const insights = [];
+  const marg = t.receita>0?(t.lucro/t.receita*100):0;
+  const pctComissao = t.receita>0?(t.mlFee/t.receita*100):0;
+  const pctFrete = t.receita>0?(t.freteMl/t.receita*100):0;
+  const pctCMV = t.receita>0?(t.cmv/t.receita*100):0;
+  const ticket = t.n>0?(t.receita/t.n):0;
+
+  if(marg >= 20) insights.push({type:'good', ico:'✅', title:'Margem saudável', desc:`Margem líquida de ${pct(marg)}% — acima do patamar ideal de 20%.`});
+  else if(marg >= 10) insights.push({type:'warn', ico:'⚠️', title:'Margem em atenção', desc:`Margem de ${pct(marg)}%. Meta recomendada: 20%+. Revise CMV e precificação.`});
+  else insights.push({type:'bad', ico:'🔴', title:'Margem crítica', desc:`Margem de ${pct(marg)}% está abaixo do mínimo. Use a calculadora de preço para ajustar.`});
+
+  if(pctComissao > 16) insights.push({type:'warn', ico:'🏪', title:'Comissão ML elevada', desc:`Taxas ML representam ${pct(pctComissao)}% da receita. Verifique se há produtos com custo fixo ML acumulado ou anúncios Premium desnecessários.`});
+
+  if(pctFrete > 12) insights.push({type:'warn', ico:'🚚', title:'Frete alto', desc:`Frete ML consome ${pct(pctFrete)}% da receita. Considere Mercado Envios Full para produtos de alto giro.`});
+
+  if(pctCMV > 55) insights.push({type:'bad', ico:'📦', title:'CMV acima do ideal', desc:`Custo da mercadoria em ${pct(pctCMV)}% da receita. Margem bruta é de apenas ${pct(100-pctCMV)}%. Negocie condições com fornecedores.`});
+
+  const prej = filtered.filter(s=>s.lucro<0).length;
+  const pctPrej = t.n>0?(prej/t.n*100):0;
+  if(pctPrej > 10) insights.push({type:'bad', ico:'📉', title:`${prej} pedidos no prejuízo`, desc:`${pct(pctPrej)}% dos pedidos estão gerando prejuízo. Filtre por "Prejuízo" no Lucro Real e revise a precificação desses produtos.`});
+
+  if(ticket > 0) insights.push({type:'good', ico:'🎯', title:`Ticket médio: ${fmt(ticket)}`, desc:`Receita média por pedido. Aumentar o ticket médio é a alavanca mais eficiente para melhorar a margem.`});
+
+  document.getElementById('insightsBody').innerHTML = insights.map(i=>
+    `<div class="insight ${i.type}">
+      <div class="insight-ico">${i.ico}</div>
+      <div>
+        <div class="insight-title">${i.title}</div>
+        <div class="insight-desc">${i.desc}</div>
+      </div>
+    </div>`
+  ).join('') || '<div class="empty"><div class="empty-desc">Sem insights disponíveis.</div></div>';
+}
+
+function renderEmpty(){
+  document.getElementById('dreBody').innerHTML = `<div class="empty"><div class="empty-ico">📋</div><div class="empty-title">Nenhum dado no período</div><div class="empty-desc">Ajuste o período ou carregue os dados.</div></div>`;
+  document.getElementById('monthGrid').innerHTML = '<div class="empty"><div class="empty-desc">Sem dados</div></div>';
+  document.getElementById('custosBar').innerHTML = '<div class="empty"><div class="empty-desc">Sem dados</div></div>';
+  document.getElementById('insightsBody').innerHTML = '<div class="empty"><div class="empty-desc">Sem dados</div></div>';
+}
+
+// ── FILTER BY MONTH ──
+function filterMonth(m){
+  filtered = allSales.filter(s=>s.date.startsWith(m));
+  document.querySelectorAll('.month-card').forEach(c=>c.classList.remove('active'));
+  event.target.closest('.month-card')?.classList.add('active');
+  const t = agg(filtered);
+  renderKPIs(t);
+  renderDRE(t);
+  renderCustosBar(t);
+  renderInsights(t);
+  document.getElementById('tbSub').textContent = `${filtered.length} vendas em ${m}`;
+}
+
+// ── EXPORT ──
+function exportDRE(){
+  if(!filtered.length) return;
+  const t = agg(filtered);
+  const rows = [
+    'DRE CPF Hub',
+    '',
+    'Item;Valor (R$);% Receita',
+    `Receita bruta;${t.receita.toFixed(2)};100%`,
+    `Comissão ML;-${t.mlFee.toFixed(2)};${pct(t.receita>0?t.mlFee/t.receita*100:0)}%`,
+    `Frete ML;-${t.freteMl.toFixed(2)};${pct(t.receita>0?t.freteMl/t.receita*100:0)}%`,
+    `Receita líquida ML;${t.netReceived.toFixed(2)};${pct(t.receita>0?t.netReceived/t.receita*100:0)}%`,
+    `CMV;-${t.cmv.toFixed(2)};${pct(t.receita>0?t.cmv/t.receita*100:0)}%`,
+    `Imposto;-${t.imposto.toFixed(2)};${pct(t.receita>0?t.imposto/t.receita*100:0)}%`,
+    `Custo operacional;-${t.op.toFixed(2)};${pct(t.receita>0?t.op/t.receita*100:0)}%`,
+    `Lucro líquido;${t.lucro.toFixed(2)};${pct(t.margem)}%`,
+    '',
+    `Total de pedidos;${t.n}`,
+    `Ticket médio;${(t.receita/t.n).toFixed(2)}`,
+  ];
+  const blob = new Blob([rows.join('\n')],{type:'text/csv;charset=utf-8;'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `dre_cpf_${new Date().toISOString().slice(0,10)}.csv`;
+  a.click();
+}
+
+// ── UTILS ──
+function fmt(n){return'R$ '+(n||0).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});}
+function fmtK(n){
+  if(Math.abs(n)>=1000) return 'R$'+(n/1000).toFixed(1)+'k';
+  return 'R$'+(n||0).toFixed(0);
+}
+function fmtDate(d){if(!d)return'–';const[y,m,dd]=d.split('-');return`${dd}/${m}/${y}`;}
+function pct(n){return(n||0).toFixed(1);}
+function txt(id,v){const e=document.getElementById(id);if(e)e.textContent=v;}
+
+// ── INIT ──
+(function(){
+  const now = new Date();
+  document.getElementById('dateTo').value = now.toISOString().slice(0,10);
+  const from = new Date(now-90*864e5);
+  document.getElementById('dateFrom').value = from.toISOString().slice(0,10);
+  loadFromCache();
+})();
+</script>
+</body>
+</html>
