@@ -72,14 +72,19 @@ app.get('/orders-full', async (req, res) => {
         const shippingId = anyOrder.shipping?.id;
         if (!shippingId) { packFreteMap[packId] = 0; return; }
 
-        const shipCosts = await axios.get(
-          `${ML_BASE}/shipments/${shippingId}/costs`,
-          { headers: { Authorization: `Bearer ${token}` } }
-        ).then(r => r.data).catch(() => null);
+        const [shipCosts, shipDetail] = await Promise.all([
+          axios.get(`${ML_BASE}/shipments/${shippingId}/costs`, {
+            headers: { Authorization: `Bearer ${token}` }
+          }).then(r => r.data).catch(() => null),
+          axios.get(`${ML_BASE}/shipments/${shippingId}`, {
+            headers: { Authorization: `Bearer ${token}` }
+          }).then(r => r.data).catch(() => null),
+        ]);
 
-        // senders[0].cost = custo final do seller após descontos do ML
-        const cost = shipCosts?.senders?.[0]?.cost || 0;
-        packFreteMap[packId] = Math.abs(parseFloat(cost));
+        const cost  = shipCosts?.senders?.[0]?.cost || 0;
+        const bonus = shipCosts?.receiver?.save || 0;
+        const isFlex = shipDetail?.logistic_type === 'self_service' || shipDetail?.mode === 'me2';
+        packFreteMap[packId] = { frete: Math.abs(parseFloat(cost)), bonus: Math.abs(parseFloat(bonus)), isFlex };
       } catch(e) {
         packFreteMap[packId] = 0;
       }
@@ -116,7 +121,7 @@ app.get('/orders-full', async (req, res) => {
       }
     };
 
-    const processOrder = async (order, freteRateado) => {
+    const processOrder = async (order, freteRateado, bonusEnvio = 0, isFlex = false) => {
       const salePrice = parseFloat(order.total_amount) || 0;
 
       // sale_fee × quantidade = total da tarifa ML (comissão % + custo fixo)
@@ -149,7 +154,7 @@ app.get('/orders-full', async (req, res) => {
       }
 
       const shippingCost = freteRateado;
-      const netReceived  = salePrice - mlFee - shippingCost + estorno;
+      const netReceived  = salePrice - mlFee - shippingCost + estorno + bonusEnvio;
 
       return {
         ...order,
@@ -161,6 +166,8 @@ app.get('/orders-full', async (req, res) => {
           shipping_cost: shippingCost,
           estorno:       estorno,
           net_received:  netReceived,
+          bonus_envio:   bonusEnvio,
+          is_flex:       isFlex,
           is_pack:       !!order.pack_id,
           pack_id:       order.pack_id || null,
         }
@@ -172,7 +179,8 @@ app.get('/orders-full', async (req, res) => {
     // Orders de pacote — rateia frete pelo peso do valor de cada order no pack
     for (const packId of Object.keys(packMap)) {
       const packOrders = packMap[packId];
-      const totalFretepack = packFreteMap[packId] || 0;
+      const totalFretepack = packFreteMap[packId]?.frete || 0;
+      const totalBonusPack  = packFreteMap[packId]?.bonus || 0;
       const totalValorPack = packOrders.reduce((a, o) => a + (parseFloat(o.total_amount) || 0), 0);
 
       for (const order of packOrders) {
@@ -181,7 +189,11 @@ app.get('/orders-full', async (req, res) => {
         const freteRateado = totalValorPack > 0
           ? totalFretepack * (salePrice / totalValorPack)
           : 0;
-        detailed.push(await processOrder(order, freteRateado));
+        const bonusRateado = totalValorPack > 0
+          ? totalBonusPack * (salePrice / totalValorPack)
+          : 0;
+        const isFlexPack = packFreteMap[packId]?.isFlex || false;
+        detailed.push(await processOrder(order, freteRateado, bonusRateado, isFlexPack));
       }
     }
 
@@ -189,14 +201,22 @@ app.get('/orders-full', async (req, res) => {
     for (const order of soloOrders) {
       const shippingId = order.shipping?.id;
       let frete = 0;
+      let bonusEnvio = 0;
+      let isFlex = false;
       if (shippingId) {
-        const shipCosts = await axios.get(
-          `${ML_BASE}/shipments/${shippingId}/costs`,
-          { headers: { Authorization: `Bearer ${token}` } }
-        ).then(r => r.data).catch(() => null);
-        frete = Math.abs(parseFloat(shipCosts?.senders?.[0]?.cost || 0));
+        const [shipCosts, shipDetail] = await Promise.all([
+          axios.get(`${ML_BASE}/shipments/${shippingId}/costs`, {
+            headers: { Authorization: `Bearer ${token}` }
+          }).then(r => r.data).catch(() => null),
+          axios.get(`${ML_BASE}/shipments/${shippingId}`, {
+            headers: { Authorization: `Bearer ${token}` }
+          }).then(r => r.data).catch(() => null),
+        ]);
+        frete      = Math.abs(parseFloat(shipCosts?.senders?.[0]?.cost || 0));
+        bonusEnvio = Math.abs(parseFloat(shipCosts?.receiver?.save || 0));
+        isFlex     = shipDetail?.logistic_type === 'self_service' || shipDetail?.mode === 'me2';
       }
-      detailed.push(await processOrder(order, frete));
+      detailed.push(await processOrder(order, frete, bonusEnvio, isFlex));
     }
 
     res.json({ results: detailed, paging });
