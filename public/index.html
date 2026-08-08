@@ -351,6 +351,15 @@ tbody tr:hover .cmv-edit-btn{opacity:1}
         <div class="fg"><label class="fl">CMV padrão quando sem custo (%)</label><input class="fi" id="cCmv" type="number" step="0.1" placeholder="45.0"></div>
       </div>
       <div class="fg"><label class="fl">Custo operacional fixo (R$/pedido)</label><input class="fi" id="cOp" type="number" step="0.01" placeholder="2.50"></div>
+      <hr class="fsep"><div class="fsec">Mercado Envios Flex</div>
+      <div style="font-size:11px;color:var(--sub);margin-bottom:10px;line-height:1.6">
+        Vendas Flex: o ML reembolsa o frete cobrado do comprador, mas você paga a transportadora. 
+        Informe o custo médio que você paga por envio Flex para o cálculo ser preciso.
+      </div>
+      <div class="frow">
+        <div class="fg"><label class="fl">Custo médio Flex (R$/envio)</label><input class="fi" id="cFlex" type="number" step="0.01" placeholder="15.00"></div>
+        <div class="fg"><label class="fl">Estorno ML por envio Flex (R$)</label><input class="fi" id="cFlexEstorno" type="number" step="0.01" placeholder="0.00"></div>
+      </div>
       <div class="fact"><button class="btn btn-ghost" onclick="closeConfig()">Cancelar</button><button class="btn btn-green" onclick="saveConfig()">Salvar</button></div>
     </div>
   </div>
@@ -400,9 +409,9 @@ let cfg={
 
 // ══ CONFIG ══
 function loadCfg(){const s=localStorage.getItem('cpf_cfg6');if(s)cfg={...cfg,...JSON.parse(s)};}
-function openConfig(){loadCfg();document.getElementById('cToken').value=cfg.token||'';document.getElementById('cRefresh').value=cfg.refresh||'';document.getElementById('cImp').value=cfg.imp;document.getElementById('cCmv').value=cfg.cmvPct;document.getElementById('cOp').value=cfg.op;document.getElementById('cDateS').value=cfg.dateS||'';document.getElementById('cDateE').value=cfg.dateE||'';document.getElementById('overlay').classList.add('open');}
+function openConfig(){loadCfg();document.getElementById('cToken').value=cfg.token||'';document.getElementById('cRefresh').value=cfg.refresh||'';document.getElementById('cImp').value=cfg.imp;document.getElementById('cCmv').value=cfg.cmvPct;document.getElementById('cOp').value=cfg.op;document.getElementById('cFlex').value=cfg.flexCost||'';document.getElementById('cFlexEstorno').value=cfg.flexEstorno||'';document.getElementById('cDateS').value=cfg.dateS||'';document.getElementById('cDateE').value=cfg.dateE||'';document.getElementById('overlay').classList.add('open');}
 function closeConfig(){document.getElementById('overlay').classList.remove('open');}
-function saveConfig(){cfg.token=document.getElementById('cToken').value.trim();cfg.refresh=document.getElementById('cRefresh').value.trim();cfg.imp=parseFloat(document.getElementById('cImp').value)||6;cfg.cmvPct=parseFloat(document.getElementById('cCmv').value)||45;cfg.op=parseFloat(document.getElementById('cOp').value)||2.5;cfg.dateS=document.getElementById('cDateS').value;cfg.dateE=document.getElementById('cDateE').value;localStorage.setItem('cpf_cfg6',JSON.stringify(cfg));closeConfig();}
+function saveConfig(){cfg.token=document.getElementById('cToken').value.trim();cfg.refresh=document.getElementById('cRefresh').value.trim();cfg.imp=parseFloat(document.getElementById('cImp').value)||6;cfg.cmvPct=parseFloat(document.getElementById('cCmv').value)||45;cfg.op=parseFloat(document.getElementById('cOp').value)||2.5;cfg.flexCost=parseFloat(document.getElementById('cFlex').value)||0;cfg.flexEstorno=parseFloat(document.getElementById('cFlexEstorno').value)||0;cfg.dateS=document.getElementById('cDateS').value;cfg.dateE=document.getElementById('cDateE').value;localStorage.setItem('cpf_cfg6',JSON.stringify(cfg));closeConfig();}
 
 // ══ CSV CUSTOS ══
 function openCustos(){document.getElementById('overlayCustos').classList.add('open');}
@@ -627,12 +636,26 @@ function processSales(orders){
     const op=cfg.op;
     const lucro=netReceived-cmv-imposto-op;
     const margem=receita>0?(lucro/receita)*100:0;
+    // Flex: tag "fulfillment" não, mas "self_service_reship" ou logistic_type "self_service" = Flex
+    const tags = o.tags||[];
+    const isFlex = tags.includes('self_service_reship') || 
+                   o.shipping?.logistic_type === 'self_service' ||
+                   tags.includes('me2') || tags.includes('flex');
+    
+    // Se Flex: ML reembolsa o frete do comprador (já no netReceived)
+    // mas seller ainda paga a transportadora
+    const flexCusto = isFlex ? (cfg.flexCost||0) : 0;
+    const flexEstorno = isFlex ? (fin.estorno||cfg.flexEstorno||0) : (fin.estorno||0);
+
     const indevida=detectIndevida(mlFee,receita,o.status);
 
-    const estorno=fin.estorno||0;
+    const estorno=flexEstorno;
     const mlFeePct=fin.ml_fee_pct||0;
     const mlFeeFixed=fin.ml_fee_fixed||0;
-    return{id:o.id,date:(o.date_created||'').split('T')[0],status:o.status,produto,sku,qty,receita,mlFee,mlFeePct,mlFeeFixed,freteMl,netReceived,estorno,cmv,hasCost,imposto,op,totalC:cmv+mlFee+freteMl+imposto+op,lucro,margem,indevida,indevidaVal:indevida?indevida.valor:0,_is_pack:fin.is_pack||false,_pack_id:fin.pack_id||null};
+    // Recalcula lucro incluindo custo Flex
+    const lucroFinal = netReceived + estorno - cmv - imposto - op - flexCusto;
+    const margemFinal = receita>0?(lucroFinal/receita)*100:0;
+    return{id:o.id,date:(o.date_created||'').split('T')[0],status:o.status,produto,sku,qty,receita,mlFee,mlFeePct,mlFeeFixed,freteMl,netReceived,estorno,flexCusto,isFlex,cmv,hasCost,imposto,op,totalC:cmv+mlFee+freteMl+imposto+op+flexCusto,lucro:lucroFinal,margem:margemFinal,indevida,indevidaVal:indevida?indevida.valor:0,_is_pack:fin.is_pack||false,_pack_id:fin.pack_id||null};
   }).filter(Boolean);
   filtered=[...sales];
   updateCards();updateKPIs();updateAlerts();renderTable();
@@ -812,6 +835,7 @@ function openDrawer(id){
     {l:'Frete ML (você paga)',v:s.freteMl,c:'#3B82F6'},
     {l:`Simples Nacional (${pct(cfg.imp)}%)`,v:s.imposto,c:'#A855F7'},
     {l:'Custo operacional fixo',v:s.op,c:'#4A5268'},
+    ...(s.isFlex&&s.flexCusto>0?[{l:'Custo transportadora Flex',v:s.flexCusto,c:'#3B82F6'}]:[]),
     {l:'Lucro líquido',v:Math.max(0,s.lucro),c:s.lucro>=0?'#22C55E':'#F43F5E'},
   ];
   const bar=items.map(i=>`<div style="flex:${Math.max(.3,s.receita>0?Math.abs(i.v/s.receita*100):0)};background:${i.c}"></div>`).join('');
@@ -826,6 +850,7 @@ function openDrawer(id){
       <div class="pbadge ML">Mercado Livre</div>
       <span style="font-size:10px;color:var(--dim);padding:2px 6px;border:1px solid var(--b1);border-radius:4px">${s.qty} un.</span>
       ${s.sku?`<span style="font-size:10px;color:var(--green);padding:2px 6px;border:1px solid var(--gborder);border-radius:4px;font-family:monospace">${s.sku}</span>`:''}
+      ${s.isFlex?'<span style="font-size:10px;color:var(--blue);padding:2px 6px;border:1px solid rgba(59,130,246,.3);border-radius:4px">🚴 Flex</span>':''}
     </div>
     ${s._is_pack?`<div style="background:rgba(245,158,11,.08);border:1px solid rgba(245,158,11,.2);border-radius:6px;padding:7px 11px;margin-bottom:10px;font-size:11px;color:var(--amber)">📦 Pedido parte de um pacote — frete rateado proporcionalmente entre os itens do pacote.</div>`:''}
     <div class="dr-net"><div class="dr-net-lbl">💵 Recebido do ML (após comissão + frete)</div><div class="dr-net-val">${fmt(s.netReceived)}</div></div>
@@ -844,6 +869,8 @@ function openDrawer(id){
     <div class="dr-row"><span class="dr-row-lbl text-sub">CMV${s.hasCost?' (real)':' (~estimado)'}</span><span class="dr-row-val amber">− ${fmt(s.cmv)}</span></div>
     <div class="dr-row"><span class="dr-row-lbl text-sub">Simples Nacional</span><span class="dr-row-val amber">− ${fmt(s.imposto)}</span></div>
     <div class="dr-row"><span class="dr-row-lbl text-sub">Custo operacional</span><span class="dr-row-val amber">− ${fmt(s.op)}</span></div>
+    ${s.isFlex ? '<div class="dr-row"><span class="dr-row-lbl text-sub" style="color:var(--blue)">🚴 Custo transportadora Flex</span><span class="dr-row-val amber">− '+fmt(s.flexCusto)+'</span></div>' : ''}
+    ${s.estorno>0 ? '<div class="dr-row"><span class="dr-row-lbl text-sub" style="color:var(--green)">Estorno frete ML (Flex)</span><span class="dr-row-val green">+ '+fmt(s.estorno)+'</span></div>' : ''}
     <hr class="dr-divider">
     <div class="dr-row"><span class="dr-row-lbl" style="font-size:13px;font-weight:700">Lucro líquido</span><span class="dr-row-val ${s.lucro>=0?'green':'red'}" style="font-size:15px">${fmt(s.lucro)}</span></div>
     <div class="dr-margem-box">
