@@ -650,8 +650,9 @@ function processSales(orders){
     const bonusEnvio=fin.bonus_envio||0;
     const mlFeePct=fin.ml_fee_pct||0;
     const mlFeeFixed=fin.ml_fee_fixed||0;
-    // Recalcula lucro incluindo custo Flex
-    const lucroFinal = netReceived + estorno - cmv - imposto - op - flexCusto;
+    // lucroFinal: netReceived já inclui bonusEnvio (somado no servidor)
+    // flexCusto é debitado aqui pois não passa pelo ML
+    const lucroFinal = netReceived - cmv - imposto - op - flexCusto;
     const margemFinal = receita>0?(lucroFinal/receita)*100:0;
     return{id:o.id,date:(o.date_created||'').split('T')[0],status:o.status,produto,sku,qty,receita,mlFee,mlFeePct,mlFeeFixed,freteMl,netReceived,estorno,bonusEnvio,flexCusto,isFlex,cmv,hasCost,imposto,op,totalC:cmv+mlFee+freteMl+imposto+op+flexCusto,lucro:lucroFinal,margem:margemFinal,indevida,indevidaVal:indevida?indevida.valor:0,_is_pack:fin.is_pack||false,_pack_id:fin.pack_id||null};
   }).filter(Boolean);
