@@ -46,8 +46,12 @@ app.get('/orders-full', async (req, res) => {
     const orders = listResp.data.results || [];
     const paging = listResp.data.paging || {};
 
-    // 2. Detalhes financeiros reais em paralelo
-    const detailed = await Promise.all(orders.map(async (order) => {
+    // 2. Detalhes financeiros reais em lotes de 10 (evita rate limit do ML)
+    const BATCH = 10;
+    const detailed = [];
+    for(let i = 0; i < orders.length; i += BATCH){
+      const batch = orders.slice(i, i + BATCH);
+      const results = await Promise.all(batch.map(async (order) => {
       try {
         const salePrice = parseFloat(order.total_amount) || 0;
 
@@ -104,6 +108,10 @@ app.get('/orders-full', async (req, res) => {
         };
       }
     }));
+      detailed.push(...results);
+      // Pausa de 300ms entre lotes para respeitar rate limit do ML
+      if(i + BATCH < orders.length) await new Promise(r => setTimeout(r, 300));
+    }
 
     res.json({ results: detailed, paging });
 
