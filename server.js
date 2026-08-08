@@ -11,7 +11,7 @@ const CLIENT_ID = '5798831532059966';
 const CLIENT_SECRET = 'qt5i8KjEWCMMECtWDspShpDktS9dWCeN';
 
 app.get('/', (req, res) => {
-  res.json({ status: 'CPF Hub API online', version: '5.0' });
+  res.json({ status: 'CPF Hub API online', version: '8.0' });
 });
 
 // Proxy GET genérico
@@ -82,10 +82,40 @@ app.get('/orders-full', async (req, res) => {
     }));
 
     // 4. Para cada pack, rateia o frete proporcional ao valor de cada item
-    const processOrder = (order, freteRateado) => {
+    // Busca billing_info para separar comissão % do custo fixo ML
+    const fetchFeeBreakdown = async (orderId) => {
+      try {
+        const billing = await axios.get(
+          `${ML_BASE}/orders/${orderId}/billing_info`,
+          { headers: { Authorization: `Bearer ${token}` } }
+        ).then(r => r.data).catch(() => null);
+
+        if (!billing) return { ml_fee_pct: 0, ml_fee_fixed: 0 };
+
+        // billing_info.sale_fees[] tem os componentes separados
+        let feePct = 0, feeFixed = 0;
+        const fees = billing.sale_fees || [];
+        fees.forEach(f => {
+          const val = Math.abs(parseFloat(f.amount || 0));
+          // type: "marketplace_fee" = comissão %, "fixed_fee" = custo fixo
+          if (f.type === 'fixed_fee' || f.reason === 'fixed') {
+            feeFixed += val;
+          } else {
+            feePct += val;
+          }
+        });
+
+        // fallback: se não veio separado, retorna zerado
+        return { ml_fee_pct: feePct, ml_fee_fixed: feeFixed };
+      } catch(e) {
+        return { ml_fee_pct: 0, ml_fee_fixed: 0 };
+      }
+    };
+
+    const processOrder = async (order, freteRateado) => {
       const salePrice = parseFloat(order.total_amount) || 0;
 
-      // Comissão real: sale_fee × quantidade por item
+      // sale_fee × quantidade = total da tarifa ML (comissão % + custo fixo)
       let mlFee = 0;
       const items = order.order_items || [];
       items.forEach(item => {
@@ -94,15 +124,38 @@ app.get('/orders-full', async (req, res) => {
         mlFee += feePerUnit * qty;
       });
 
+      // Estorno: transaction_amount_refunded nos payments
+      let estorno = 0;
+      const payments = order.payments || [];
+      payments.forEach(p => {
+        const refunded = parseFloat(p.transaction_amount_refunded || 0);
+        if (refunded > 0) estorno += refunded;
+      });
+
+      // Breakdown da tarifa ML (comissão % vs custo fixo)
+      const breakdown = await fetchFeeBreakdown(order.id);
+      // Se o billing_info não separou, estimamos: custo fixo = total - (14% do valor)
+      let mlFeePct   = breakdown.ml_fee_pct;
+      let mlFeeFixed = breakdown.ml_fee_fixed;
+      if (mlFeePct === 0 && mlFeeFixed === 0 && mlFee > 0) {
+        // Estimativa: 14% sobre o preço de venda = comissão percentual
+        const estimated_pct = salePrice * 0.14;
+        mlFeePct   = Math.min(estimated_pct, mlFee);
+        mlFeeFixed = Math.max(0, mlFee - mlFeePct);
+      }
+
       const shippingCost = freteRateado;
-      const netReceived = salePrice - mlFee - shippingCost;
+      const netReceived  = salePrice - mlFee - shippingCost + estorno;
 
       return {
         ...order,
         _financial: {
           sale_price:    salePrice,
           ml_fee:        mlFee,
+          ml_fee_pct:    mlFeePct,
+          ml_fee_fixed:  mlFeeFixed,
           shipping_cost: shippingCost,
+          estorno:       estorno,
           net_received:  netReceived,
           is_pack:       !!order.pack_id,
           pack_id:       order.pack_id || null,
@@ -118,18 +171,18 @@ app.get('/orders-full', async (req, res) => {
       const totalFretepack = packFreteMap[packId] || 0;
       const totalValorPack = packOrders.reduce((a, o) => a + (parseFloat(o.total_amount) || 0), 0);
 
-      packOrders.forEach(order => {
+      for (const order of packOrders) {
         const salePrice = parseFloat(order.total_amount) || 0;
         // Frete rateado proporcionalmente ao valor do item no pack
         const freteRateado = totalValorPack > 0
           ? totalFretepack * (salePrice / totalValorPack)
           : 0;
-        detailed.push(processOrder(order, freteRateado));
-      });
+        detailed.push(await processOrder(order, freteRateado));
+      }
     }
 
     // Orders solo — frete integral
-    await Promise.all(soloOrders.map(async order => {
+    for (const order of soloOrders) {
       const shippingId = order.shipping?.id;
       let frete = 0;
       if (shippingId) {
@@ -139,11 +192,29 @@ app.get('/orders-full', async (req, res) => {
         ).then(r => r.data).catch(() => null);
         frete = Math.abs(parseFloat(shipCosts?.senders?.[0]?.cost || 0));
       }
-      detailed.push(processOrder(order, frete));
-    }));
+      detailed.push(await processOrder(order, frete));
+    }
 
     res.json({ results: detailed, paging });
 
+  } catch (err) {
+    res.status(err.response?.status || 500).json(err.response?.data || { error: err.message });
+  }
+});
+
+// Busca pública ML (sem autenticação) — para Hunter Spy
+app.get('/ml-public/*', async (req, res) => {
+  const path = req.params[0];
+  const query = new URLSearchParams(req.query).toString();
+  const url = `${ML_BASE}/${path}${query ? '?' + query : ''}`;
+  try {
+    const r = await axios.get(url, {
+      headers: {
+        'Accept': 'application/json',
+        'User-Agent': 'Mozilla/5.0'
+      }
+    });
+    res.json(r.data);
   } catch (err) {
     res.status(err.response?.status || 500).json(err.response?.data || { error: err.message });
   }
@@ -171,4 +242,4 @@ app.post('/ml/oauth/refresh', async (req, res) => {
 });
 
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log(`CPF Hub v5.0 rodando na porta ${PORT}`));
+app.listen(PORT, () => console.log(`CPF Hub v8.0 rodando na porta ${PORT}`));
