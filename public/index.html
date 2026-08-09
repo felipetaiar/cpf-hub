@@ -409,6 +409,31 @@ let cfg={
 
 // ══ CONFIG ══
 function loadCfg(){const s=localStorage.getItem('cpf_cfg6');if(s)cfg={...cfg,...JSON.parse(s)};}
+
+async function syncTokensFromServer(){
+  // Carrega tokens salvos no GitHub via servidor
+  try{
+    const r = await fetch(PROXY+'/ml-tokens');
+    if(r.ok){
+      const t = await r.json();
+      if(t.access_token && t.refresh_token){
+        cfg.token   = t.access_token;
+        cfg.refresh = t.refresh_token;
+        localStorage.setItem('cpf_cfg6', JSON.stringify(cfg));
+      }
+    }
+  }catch(e){ console.warn('Token sync:', e.message); }
+}
+
+async function saveTokensToServer(token, refresh){
+  try{
+    await fetch(PROXY+'/ml-tokens',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({access_token:token, refresh_token:refresh})
+    });
+  }catch(e){ console.warn('Token save:', e.message); }
+}
 function openConfig(){loadCfg();document.getElementById('cToken').value=cfg.token||'';document.getElementById('cRefresh').value=cfg.refresh||'';document.getElementById('cImp').value=cfg.imp;document.getElementById('cCmv').value=cfg.cmvPct;document.getElementById('cOp').value=cfg.op;document.getElementById('cFlex').value=cfg.flexCost||'';document.getElementById('cFlexEstorno').value=cfg.flexEstorno||'';document.getElementById('cDateS').value=cfg.dateS||'';document.getElementById('cDateE').value=cfg.dateE||'';document.getElementById('overlay').classList.add('open');}
 function closeConfig(){document.getElementById('overlay').classList.remove('open');}
 function saveConfig(){cfg.token=document.getElementById('cToken').value.trim();cfg.refresh=document.getElementById('cRefresh').value.trim();cfg.imp=parseFloat(document.getElementById('cImp').value)||6;cfg.cmvPct=parseFloat(document.getElementById('cCmv').value)||45;cfg.op=parseFloat(document.getElementById('cOp').value)||2.5;cfg.flexCost=parseFloat(document.getElementById('cFlex').value)||0;cfg.flexEstorno=parseFloat(document.getElementById('cFlexEstorno').value)||0;cfg.dateS=document.getElementById('cDateS').value;cfg.dateE=document.getElementById('cDateE').value;localStorage.setItem('cpf_cfg6',JSON.stringify(cfg));closeConfig();}
@@ -603,7 +628,13 @@ async function refreshToken(){
   try{
     const r=await fetch(`${PROXY}/ml/oauth/refresh`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({refresh_token:cfg.refresh})});
     const d=await r.json();
-    if(d.access_token){cfg.token=d.access_token;if(d.refresh_token)cfg.refresh=d.refresh_token;localStorage.setItem('cpf_cfg6',JSON.stringify(cfg));}
+    if(d.access_token){
+      cfg.token=d.access_token;
+      if(d.refresh_token) cfg.refresh=d.refresh_token;
+      localStorage.setItem('cpf_cfg6',JSON.stringify(cfg));
+      // Salva tokens renovados no GitHub para sincronizar entre dispositivos
+      saveTokensToServer(cfg.token, cfg.refresh);
+    }
   }catch(e){console.warn('refresh falhou',e);}
 }
 
@@ -981,13 +1012,15 @@ function pct(n){return(n||0).toFixed(1);}
 function txt(id,v){const e=document.getElementById(id);if(e)e.textContent=v;}
 
 // ══ INIT ══
-(function(){
+(async function(){
   loadCfg();
   const now=new Date();
   if(!cfg.dateS){const s=new Date(now-30*864e5);cfg.dateS=s.toISOString().slice(0,10);}
   if(!cfg.dateE){cfg.dateE=now.toISOString().slice(0,10);}
   // Carrega custos do GitHub (sincronizado entre dispositivos)
   loadCostsFromServer();
+  // Carrega tokens atualizados do GitHub antes de tudo
+  await syncTokensFromServer();
   checkProxy();
   const cache=localStorage.getItem('cpf_ml_cache6');
   if(cache){try{const d=JSON.parse(cache);if(d.length){processSales(d);document.getElementById('sbTotal').textContent=d.length;setStatus('✓ Cache carregado — '+d.length+' pedidos','ok');}}catch{}}
