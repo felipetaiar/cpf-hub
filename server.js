@@ -16,8 +16,8 @@ const CLIENT_SECRET = 'z5T3D01Ry6Noe8XuudH9NNxLZDxbuUBJ';
 
 
 // ══ PERSISTÊNCIA DE CUSTOS VIA GITHUB ══
-const GITHUB_TOKEN = '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';
-const GITHUB_REPO  = 'felipetaiar/cpf-hub';
+const GITHUB_TOKEN = process.env.GITHUB_TOKEN || '';
+const GITHUB_REPO  = process.env.GITHUB_REPO  || 'felipetaiar/cpf-hub';
 const COSTS_FILE   = 'data/sku-costs.json';
 const GITHUB_API   = 'https://api.github.com';
 
