@@ -15,6 +15,58 @@ const CLIENT_ID = '6586109675721603';
 const CLIENT_SECRET = 'z5T3D01Ry6Noe8XuudH9NNxLZDxbuUBJ';
 
 
+// ══ PERSISTÊNCIA DE TOKENS ML VIA GITHUB ══
+const TOKENS_FILE = 'data/ml-tokens.json';
+
+async function getTokensFromGitHub() {
+  try {
+    const r = await axios.get(
+      `${GITHUB_API}/repos/${GITHUB_REPO}/contents/${TOKENS_FILE}`,
+      { headers: { Authorization: `token ${GITHUB_TOKEN}`, Accept: 'application/vnd.github.v3+json' } }
+    );
+    return JSON.parse(Buffer.from(r.data.content, 'base64').toString('utf8'));
+  } catch(e) {
+    return null;
+  }
+}
+
+async function saveTokensToGitHub(tokens) {
+  try {
+    let sha = null;
+    try {
+      const r = await axios.get(
+        `${GITHUB_API}/repos/${GITHUB_REPO}/contents/${TOKENS_FILE}`,
+        { headers: { Authorization: `token ${GITHUB_TOKEN}`, Accept: 'application/vnd.github.v3+json' } }
+      );
+      sha = r.data.sha;
+    } catch(e) {}
+
+    const content = Buffer.from(JSON.stringify(tokens, null, 2)).toString('base64');
+    await axios.put(
+      `${GITHUB_API}/repos/${GITHUB_REPO}/contents/${TOKENS_FILE}`,
+      { message: 'CPF Hub: renova tokens ML', content, ...(sha ? { sha } : {}) },
+      { headers: { Authorization: `token ${GITHUB_TOKEN}`, Accept: 'application/vnd.github.v3+json' } }
+    );
+  } catch(e) {
+    console.warn('Erro ao salvar tokens:', e.message);
+  }
+}
+
+// GET /ml-tokens — retorna tokens salvos
+app.get('/ml-tokens', async (req, res) => {
+  const tokens = await getTokensFromGitHub();
+  if (tokens) res.json(tokens);
+  else res.status(404).json({ error: 'Tokens não encontrados' });
+});
+
+// POST /ml-tokens — salva tokens
+app.post('/ml-tokens', async (req, res) => {
+  const { access_token, refresh_token } = req.body;
+  if (!access_token || !refresh_token) return res.status(400).json({ error: 'access_token e refresh_token obrigatórios' });
+  await saveTokensToGitHub({ access_token, refresh_token, updated_at: new Date().toISOString() });
+  res.json({ ok: true });
+});
+
 // ══ PERSISTÊNCIA DE CUSTOS VIA GITHUB ══
 const GITHUB_TOKEN = process.env.GITHUB_TOKEN || '';
 const GITHUB_REPO  = process.env.GITHUB_REPO  || 'felipetaiar/cpf-hub';
@@ -72,7 +124,7 @@ app.post('/costs', async (req, res) => {
 });
 
 app.get('/', (req, res) => {
-  res.json({ status: 'CPF Hub API online', version: '13.0' });
+  res.json({ status: 'CPF Hub API online', version: '14.0' });
 });
 
 // Proxy GET genérico
@@ -391,11 +443,20 @@ app.post('/ml/oauth/refresh', async (req, res) => {
       }),
       { headers: { 'Content-Type': 'application/x-www-form-urlencoded' } }
     );
-    res.json(r.data);
+    const data = r.data;
+    // Salva novos tokens no GitHub automaticamente após renovação
+    if (data.access_token) {
+      await saveTokensToGitHub({
+        access_token: data.access_token,
+        refresh_token: data.refresh_token || refresh_token,
+        updated_at: new Date().toISOString()
+      });
+    }
+    res.json(data);
   } catch (err) {
     res.status(err.response?.status || 500).json(err.response?.data || { error: err.message });
   }
 });
 
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log(`CPF Hub v13.0 rodando na porta ${PORT}`));
+app.listen(PORT, () => console.log(`CPF Hub v14.0 rodando na porta ${PORT}`));
