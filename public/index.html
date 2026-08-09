@@ -874,16 +874,27 @@ function filtrarIndevidas(){activeMargin=activeMargin==='indev'?null:'indev';doc
 // ══ PRECIFICAÇÃO SUGERIDA ══
 function buildPricingSuggestion(s){
   if(s.margem >= 10) return '';
+
+  // Comissão: percentual real cobrado pelo ML
   const pctComissao = s.receita > 0 ? s.mlFee / s.receita : 0.14;
-  const pctFrete    = s.receita > 0 ? s.freteMl / s.receita : 0;
   const pctImposto  = cfg.imp / 100;
+
+  // Frete líquido real = custo transportadora Flex - bônus por envio ML
+  // Para pedidos não-Flex = frete ML pago pelo seller
+  // Tratamos como valor fixo (R$) pois não é percentual do preço
+  const freteFixo = s.isFlex
+    ? Math.max(0, (s.flexCusto||0) - (s.bonusEnvio||0))
+    : Math.max(0, s.freteMl - (s.bonusEnvio||0));
+
   const metas = [10, 15, 20];
   const cores = {10:'#F59E0B', 15:'#22C55E', 20:'#3B82F6'};
 
   const rows = metas.map(meta => {
-    const divisor = 1 - pctComissao - pctFrete - pctImposto - (meta/100);
+    // Fórmula: Preço = (CMV + Op_fixo + Frete_fixo) / (1 - comissão% - imposto% - meta%)
+    // O frete fixo não é percentual do preço — sai do numerador
+    const divisor = 1 - pctComissao - pctImposto - (meta/100);
     if(divisor <= 0) return '';
-    const preco = (s.cmv + s.op) / divisor;
+    const preco = (s.cmv + s.op + freteFixo) / divisor;
     const diff  = preco - s.receita;
     const cor   = cores[meta];
     return '<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid rgba(255,255,255,.05)">'
@@ -894,11 +905,15 @@ function buildPricingSuggestion(s){
       + '</div></div>';
   }).join('');
 
+  const freteLabel = s.isFlex
+    ? 'frete Flex líquido (' + fmt(freteFixo) + ')'
+    : 'frete líquido (' + fmt(freteFixo) + ')';
+
   return '<div style="background:rgba(59,130,246,.08);border:1px solid rgba(59,130,246,.2);border-radius:8px;padding:12px 14px;margin-top:12px">'
     + '<div style="font-size:10px;font-weight:700;letter-spacing:.8px;color:#93C5FD;text-transform:uppercase;margin-bottom:10px">💡 Precificação sugerida</div>'
     + rows
     + '<div style="font-size:10px;color:var(--dim);margin-top:8px;line-height:1.5">'
-    + 'Calculado mantendo comissão ML (' + (pctComissao*100).toFixed(1) + '%) e frete (' + (pctFrete*100).toFixed(1) + '%) proporcionais ao novo preço.'
+    + 'Calculado mantendo comissão ML (' + (pctComissao*100).toFixed(1) + '%) e ' + freteLabel + ' como custo fixo.'
     + '</div></div>';
 }
 
