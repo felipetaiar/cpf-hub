@@ -414,6 +414,34 @@ function closeConfig(){document.getElementById('overlay').classList.remove('open
 function saveConfig(){cfg.token=document.getElementById('cToken').value.trim();cfg.refresh=document.getElementById('cRefresh').value.trim();cfg.imp=parseFloat(document.getElementById('cImp').value)||6;cfg.cmvPct=parseFloat(document.getElementById('cCmv').value)||45;cfg.op=parseFloat(document.getElementById('cOp').value)||2.5;cfg.flexCost=parseFloat(document.getElementById('cFlex').value)||0;cfg.flexEstorno=parseFloat(document.getElementById('cFlexEstorno').value)||0;cfg.dateS=document.getElementById('cDateS').value;cfg.dateE=document.getElementById('cDateE').value;localStorage.setItem('cpf_cfg6',JSON.stringify(cfg));closeConfig();}
 
 // ══ CSV CUSTOS ══
+// ══ PERSISTÊNCIA DE CUSTOS (GITHUB VIA SERVIDOR) ══
+async function loadCostsFromServer(){
+  try{
+    const r = await fetch(PROXY+'/costs');
+    const data = await r.json();
+    if(data && typeof data==='object' && !data.error){
+      skuCosts={...data};
+      localStorage.setItem('cpf_skucosts6',JSON.stringify(skuCosts));
+      const n=Object.keys(skuCosts).length;
+      document.getElementById('sbSkus').textContent=n||'–';
+      if(n>0) setStatus('✓ '+n+' custos carregados do servidor','ok');
+    }
+  }catch(e){
+    const sc=localStorage.getItem('cpf_skucosts6');
+    if(sc){try{skuCosts=JSON.parse(sc);document.getElementById('sbSkus').textContent=Object.keys(skuCosts).length;}catch{}}
+    console.warn('Custos: usando localStorage como fallback');
+  }
+}
+
+async function saveCostsToServer(costs){
+  localStorage.setItem('cpf_skucosts6',JSON.stringify(costs));
+  try{
+    const r=await fetch(PROXY+'/costs',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(costs)});
+    const d=await r.json();
+    if(d.ok) setStatus('✓ Custos salvos — '+d.total+' SKUs sincronizados','ok');
+  }catch(e){console.warn('Erro ao salvar custos:',e.message);}
+}
+
 function openCustos(){document.getElementById('overlayCustos').classList.add('open');}
 function closeCustos(){document.getElementById('overlayCustos').classList.remove('open');}
 function dropCSV(e){e.preventDefault();const f=e.dataTransfer.files[0];if(f)readFile(f);}
@@ -476,12 +504,12 @@ function parseCSV(text){
 
 function aplicarCustos(){
   if(!Object.keys(pendingCSV).length){alert('Carregue um CSV primeiro');return;}
-  skuCosts={...skuCosts,...pendingCSV}; // merge — não substitui custos manuais
-  localStorage.setItem('cpf_skucosts6',JSON.stringify(skuCosts));
+  skuCosts={...skuCosts,...pendingCSV};
+  saveCostsToServer(skuCosts);
   document.getElementById('sbSkus').textContent=Object.keys(skuCosts).length;
   if(sales.length){sales=sales.map(s=>recalc(s));filtered=[...sales];updateCards();updateKPIs();updateAlerts();renderTable();}
   closeCustos();
-  setStatus(`✓ ${Object.keys(skuCosts).length} custos aplicados — lucros recalculados`,'ok');
+  setStatus(`✓ ${Object.keys(skuCosts).length} custos aplicados e salvos`,'ok');
 }
 
 // ══ EDIÇÃO DE CMV ══
@@ -502,13 +530,31 @@ function saveCMVInline(id, val){
   if(s.sku) skuCosts[s.sku.toUpperCase()] = custoUnit;
   // Salva também por order ID para pedidos sem SKU
   skuCosts['ORDER_'+id] = custoUnit;
-  localStorage.setItem('cpf_skucosts6',JSON.stringify(skuCosts));
+  saveCostsToServer(skuCosts);
   document.getElementById('sbSkus').textContent=Object.keys(skuCosts).length;
-  sales = sales.map(x=>x.id===id ? recalc({...x,_forceUnitCost:custoUnit}) : x);
-  filtered = filtered.map(x=>x.id===id ? sales.find(s=>s.id===id) : x);
+  // Atualiza skuCosts em memória e recalcula TODOS os pedidos com esse SKU
+  const skuUpper = (s.sku||'').toUpperCase();
+  // Força custo no mapa de SKUs para que getCMVUnit retorne o valor atualizado
+  if(skuUpper) skuCosts[skuUpper] = custoUnit;
+  skuCosts['ORDER_'+id] = custoUnit;
+
+  // Recalcula todos os pedidos — os do mesmo SKU pegam automaticamente via getCMVUnit
+  sales = sales.map(x => recalc(x));
+  filtered = sales.filter(x => {
+    // Mantém os mesmos filtros ativos
+    if(activeMargin==='good' && x.margem<=20) return false;
+    if(activeMargin==='warn' && (x.margem>20||x.margem<5)) return false;
+    if(activeMargin==='bad'  && x.margem>=5) return false;
+    if(activeMargin==='indev' && !x.indevida) return false;
+    if(activeMargin==='nocost' && x.hasCost) return false;
+    const q = document.getElementById('searchInput')?.value?.toLowerCase()||'';
+    if(q && !x.produto.toLowerCase().includes(q) && !String(x.id).includes(q) && !(x.sku||'').toLowerCase().includes(q)) return false;
+    return true;
+  });
   editingId = null;
-  updateCards(); updateKPIs(); updateAlerts(); renderTable();
-  setStatus('✓ Custo atualizado','ok');
+  updateCards(); updateKPIs(); updateAlerts();
+  renderTable(); // re-renderiza com todos os pedidos recalculados
+  setStatus('✓ Custo salvo e aplicado em todos os pedidos com SKU '+skuUpper,'ok');
 }
 
 function cancelEditCMV(){editingId=null;renderTable();}
@@ -940,8 +986,8 @@ function txt(id,v){const e=document.getElementById(id);if(e)e.textContent=v;}
   const now=new Date();
   if(!cfg.dateS){const s=new Date(now-30*864e5);cfg.dateS=s.toISOString().slice(0,10);}
   if(!cfg.dateE){cfg.dateE=now.toISOString().slice(0,10);}
-  const sc=localStorage.getItem('cpf_skucosts6');
-  if(sc){try{skuCosts=JSON.parse(sc);document.getElementById('sbSkus').textContent=Object.keys(skuCosts).length;}catch{}}
+  // Carrega custos do GitHub (sincronizado entre dispositivos)
+  loadCostsFromServer();
   checkProxy();
   const cache=localStorage.getItem('cpf_ml_cache6');
   if(cache){try{const d=JSON.parse(cache);if(d.length){processSales(d);document.getElementById('sbTotal').textContent=d.length;setStatus('✓ Cache carregado — '+d.length+' pedidos','ok');}}catch{}}
